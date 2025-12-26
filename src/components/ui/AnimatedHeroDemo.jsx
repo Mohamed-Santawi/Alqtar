@@ -45,16 +45,10 @@ const AnimatedHeroDemo = () => {
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm font-semibold">عناصر البحث</span>
               <div className="flex gap-2">
-                <span
-                  className="text-xs px-2 py-1 rounded-full"
-                  style={{ background: "#a8e6cf" }}
-                >
+                <span className="text-base font-meduim text-white px-2 py-1 rounded-full bg-[#24b982ff] text-gray-800">
                   PDF
                 </span>
-                <span
-                  className="text-xs px-2 py-1 rounded-full"
-                  style={{ background: "#c4b5fd" }}
-                >
+                <span className="text-base font-meduim text-white px-2 py-1 rounded-full bg-[#4220c9ff]">
                   Word
                 </span>
               </div>
@@ -75,7 +69,9 @@ const AnimatedHeroDemo = () => {
                   >
                     <CheckCircle size={16} className="text-green-500" />
                   </motion.div>
-                  <span className="text-sm text-gray-600">{item}</span>
+                  <span className="text-base text-gray-900 font-medium">
+                    {item}
+                  </span>
                 </motion.div>
               )
             )}
@@ -94,18 +90,22 @@ const AnimatedHeroDemo = () => {
         <div className="space-y-4">
           {/* Color Picker */}
           <div className="flex justify-center gap-3 mb-4">
-            {["#a8e6cf", "#c4b5fd", "#fdba74", "#fda4af", "#93c5fd"].map(
-              (color, i) => (
-                <motion.div
-                  key={color}
-                  initial={{ scale: 0, rotate: -180 }}
-                  animate={{ scale: 1, rotate: 0 }}
-                  transition={{ delay: i * 0.1, type: "spring" }}
-                  className="w-10 h-10 rounded-full cursor-pointer shadow-md"
-                  style={{ background: color }}
-                />
-              )
-            )}
+            {[
+              "#1d7c59ff",
+              "#3a18beff",
+              "#b37a3dff",
+              "#cf2a3eff",
+              "#0b2e55ff",
+            ].map((color, i) => (
+              <motion.div
+                key={color}
+                initial={{ scale: 0, rotate: -180 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ delay: i * 0.1, type: "spring" }}
+                className="w-10 h-10 rounded-full cursor-pointer shadow-md"
+                style={{ background: color }}
+              />
+            ))}
           </div>
           {/* Font Preview */}
           <motion.div
@@ -115,16 +115,16 @@ const AnimatedHeroDemo = () => {
             className="bg-white rounded-xl p-4 shadow-sm text-center"
           >
             <div className="flex justify-center gap-4 mb-2">
-              <span className="text-xs px-3 py-1 rounded-full bg-gray-100">
+              <span className="text-sm text-white px-3 py-1 rounded-full bg-gray-600 text-gray-800">
                 Cairo
               </span>
               <span
-                className="text-xs px-3 py-1 rounded-full"
+                className="text-sm px-3 py-1 rounded-full"
                 style={{ background: "#a8e6cf" }}
               >
                 Almarai
               </span>
-              <span className="text-xs px-3 py-1 rounded-full bg-gray-100">
+              <span className="text-sm text-white px-3 py-1 rounded-full bg-gray-600 text-gray-800">
                 Tajawal
               </span>
             </div>
@@ -156,9 +156,11 @@ const AnimatedHeroDemo = () => {
               animate={{ y: [0, -5, 0] }}
               transition={{ duration: 1.5, repeat: Infinity }}
             >
-              <Upload size={32} className="mx-auto text-blue-400 mb-2" />
+              <Upload size={34} className="mx-auto text-blue-600 mb-2" />
             </motion.div>
-            <p className="text-sm text-gray-500">PDF • صور • نصوص</p>
+            <p className="text-sm text-gray-800 font-medium">
+              PDF • صور • نصوص
+            </p>
           </motion.div>
           {/* Chat Bubbles */}
           <div className="space-y-2">
@@ -168,7 +170,9 @@ const AnimatedHeroDemo = () => {
               transition={{ delay: 0.5 }}
               className="bg-blue-50 rounded-xl p-3 mr-8"
             >
-              <p className="text-sm text-blue-700">لخص لي هذا الكتاب</p>
+              <p className="text-base text-blue-700 font-medium">
+                لخص لي هذا الكتاب
+              </p>
             </motion.div>
             <motion.div
               initial={{ opacity: 0, x: -20 }}
@@ -176,7 +180,9 @@ const AnimatedHeroDemo = () => {
               transition={{ delay: 1 }}
               className="bg-gray-50 rounded-xl p-3 ml-8"
             >
-              <p className="text-sm text-gray-600">إليك ملخص شامل للكتاب...</p>
+              <p className="text-base text-gray-800 font-medium">
+                إليك ملخص شامل للكتاب...
+              </p>
             </motion.div>
           </div>
         </div>
@@ -198,14 +204,16 @@ const AnimatedHeroDemo = () => {
             className="bg-white rounded-xl p-4 shadow-sm"
           >
             <div className="flex items-center gap-2 mb-3">
-              <Image size={16} className="text-orange-400" />
-              <FileText size={16} className="text-orange-400" />
-              <span className="text-xs text-gray-500">
+              <Image size={16} className="text-orange-600" />
+              <FileText size={16} className="text-orange-600" />
+              <span className="text-sm text-gray-800 font-medium">
                 ارفع صورة أو ملف السؤال
               </span>
             </div>
-            <div className="bg-orange-50 rounded-lg p-3">
-              <p className="text-sm text-orange-700">س: احسب مساحة المثلث...</p>
+            <div className="bg-orange-100 rounded-lg p-3">
+              <p className="text-base text-orange-800 font-medium">
+                س: احسب مساحة المثلث...
+              </p>
             </div>
           </motion.div>
           {/* Solution */}
@@ -216,10 +224,10 @@ const AnimatedHeroDemo = () => {
             className="bg-green-50 rounded-xl p-3"
           >
             <div className="flex items-center gap-2 mb-2">
-              <CheckCircle size={14} className="text-green-500" />
-              <span className="text-sm font-semibold text-green-700">الحل</span>
+              <CheckCircle size={14} className="text-green-700" />
+              <span className="text-base font-medium text-green-800">الحل</span>
             </div>
-            <p className="text-xs text-green-600">
+            <p className="text-base font-medium text-green-700">
               المساحة = ½ × القاعدة × الارتفاع
             </p>
           </motion.div>
@@ -253,7 +261,9 @@ const AnimatedHeroDemo = () => {
                 className="bg-white rounded-lg p-2 text-center shadow-sm cursor-pointer hover:shadow-md transition-shadow"
               >
                 <span className="text-lg">{type.icon}</span>
-                <p className="text-xs text-gray-600 mt-1">{type.name}</p>
+                <p className="text-base font-medium text-gray-800 mt-1 font-medium">
+                  {type.name}
+                </p>
               </motion.div>
             ))}
           </div>
@@ -265,14 +275,14 @@ const AnimatedHeroDemo = () => {
             className="flex justify-center gap-3 mt-2"
           >
             <span
-              className="text-xs px-3 py-1 rounded-full"
-              style={{ background: "#a8e6cf" }}
+              className="text-base text-white font-medium px-3 py-1 rounded-full"
+              style={{ background: "#229e71ff" }}
             >
               مع نموذج الحل
             </span>
             <span
-              className="text-xs px-3 py-1 rounded-full"
-              style={{ background: "#c4b5fd" }}
+              className="text-base text-white font-medium px-3 py-1 rounded-full"
+              style={{ background: "#3e1ebdff" }}
             >
               تصدير
             </span>
@@ -286,17 +296,17 @@ const AnimatedHeroDemo = () => {
       subtitle: "من الملفات والصور والنصوص",
       description: "تفاعلية وقابلة للتصدير",
       icon: Network,
-      color: "from-teal-400 to-emerald-500",
+      color: "from-teal-500 to-emerald-700",
       content: (
         <div className="flex items-center justify-center py-4">
           {/* Mind Map Animation */}
-          <div className="relative">
+          <div className="relative" style={{ width: "180px", height: "140px" }}>
             <motion.div
               initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              className="w-16 h-16 rounded-full flex items-center justify-center"
+              animate={{ scale: 1, x: "-50%", y: "-50%" }}
+              className="absolute top-1/2 left-1/2 w-16 h-16 rounded-full flex items-center justify-center"
               style={{
-                background: "linear-gradient(135deg, #a8e6cf, #93c5fd)",
+                background: "linear-gradient(135deg, #35b989ff, #386eacff)",
               }}
             >
               <Brain size={28} className="text-white" />
@@ -308,10 +318,14 @@ const AnimatedHeroDemo = () => {
                 initial={{ opacity: 0, scale: 0 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.3 + i * 0.1 }}
-                className="absolute w-8 h-8 rounded-full bg-white shadow-md flex items-center justify-center"
+                className="absolute w-6 h-6 rounded-full bg-white shadow-md flex items-center justify-center"
                 style={{
-                  top: `${50 + Math.sin((angle * Math.PI) / 180) * 55}px`,
-                  left: `${52 + Math.cos((angle * Math.PI) / 180) * 55}px`,
+                  top: `calc(45% + ${
+                    Math.sin((angle * Math.PI) / 180) * 55
+                  }px)`,
+                  left: `calc(45% + ${
+                    Math.cos((angle * Math.PI) / 180) * 55
+                  }px)`,
                   transform: "translate(-50%, -50%)",
                 }}
               >
@@ -319,12 +333,12 @@ const AnimatedHeroDemo = () => {
                   className="w-3 h-3 rounded-full"
                   style={{
                     background: [
-                      "#a8e6cf",
-                      "#c4b5fd",
-                      "#fdba74",
-                      "#fda4af",
-                      "#93c5fd",
-                      "#fde047",
+                      "#44c495ff",
+                      "#4e3d92ff",
+                      "#bb772eff",
+                      "#81363eff",
+                      "#3a6494ff",
+                      "#bda324ff",
                     ][i],
                   }}
                 />
@@ -340,26 +354,26 @@ const AnimatedHeroDemo = () => {
       subtitle: "من صورة أو ملف أو نص",
       description: "شرائح احترافية جاهزة",
       icon: Presentation,
-      color: "from-rose-400 to-pink-500",
+      color: "from-rose-600 to-pink-800",
       content: (
-        <div className="space-y-3">
+        <div className="h-full w-full mx-auto space-y-3 flex flex-col items-center justify-center">
           {/* Slides Preview */}
-          <div className="flex gap-2 justify-center">
+          <div className="flex gap-2 justify-center items-center ">
             {[1, 2, 3].map((slide, i) => (
               <motion.div
                 key={slide}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.2 }}
-                className="w-20 h-14 rounded-lg shadow-md flex items-center justify-center text-sm font-bold"
+                className="w-20 h-14 rounded-lg shadow-md flex items-center justify-center text-base font-bold"
                 style={{
                   background:
                     i === 0
-                      ? "linear-gradient(135deg, #a8e6cf, #93c5fd)"
+                      ? "linear-gradient(135deg, #158f62ff, #3c72b1ff)"
                       : i === 1
-                      ? "linear-gradient(135deg, #c4b5fd, #fda4af)"
-                      : "#f3f4f6",
-                  color: i === 2 ? "#6b7280" : "white",
+                      ? "linear-gradient(135deg, #4e35b3ff, #a03c48ff)"
+                      : "#3763b9ff",
+                  color: i === 2 ? "white" : "white",
                 }}
               >
                 {slide}
@@ -370,9 +384,11 @@ const AnimatedHeroDemo = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.6 }}
-            className="text-center"
+            className="text-center flex justify-center items-center"
           >
-            <p className="text-xs text-gray-500">عرض تقديمي من 15 شريحة</p>
+            <p className="text-base mt-6 font-meduim text-gray-700 font-medium">
+              عرض تقديمي من 15 شريحة
+            </p>
           </motion.div>
         </div>
       ),
@@ -393,9 +409,9 @@ const AnimatedHeroDemo = () => {
             transition={{ delay: 0.2 }}
             className="w-20 h-28 rounded-lg shadow-lg flex flex-col overflow-hidden"
           >
-            <div className="h-1/3" style={{ background: "#a8e6cf" }} />
-            <div className="h-1/3" style={{ background: "#c4b5fd" }} />
-            <div className="h-1/3" style={{ background: "#fdba74" }} />
+            <div className="h-1/3" style={{ background: "#42b389ff" }} />
+            <div className="h-1/3" style={{ background: "#5d47b6ff" }} />
+            <div className="h-1/3" style={{ background: "#a77239ff" }} />
           </motion.div>
           {/* Radio */}
           <motion.div
@@ -404,9 +420,9 @@ const AnimatedHeroDemo = () => {
             transition={{ delay: 0.5 }}
             className="w-20 h-28 rounded-lg bg-gray-50 shadow-lg flex flex-col items-center justify-center gap-2"
           >
-            <Radio size={24} className="text-orange-400" />
-            <Mic size={20} className="text-amber-400" />
-            <p className="text-xs text-gray-500">إذاعة</p>
+            <Radio size={24} className="text-orange-800" />
+            <Mic size={20} className="text-amber-800" />
+            <p className="text-base text-gray-700 font-medium">إذاعة</p>
           </motion.div>
         </div>
       ),
@@ -428,7 +444,7 @@ const AnimatedHeroDemo = () => {
               animate={{ scale: 1 }}
               className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-14 h-14 rounded-xl flex items-center justify-center shadow-lg"
               style={{
-                background: "linear-gradient(135deg, #93c5fd, #c4b5fd)",
+                background: "linear-gradient(135deg, #2a6bb6ff, #61568dff)",
               }}
             >
               <Map size={24} className="text-white" />
@@ -445,17 +461,17 @@ const AnimatedHeroDemo = () => {
                 initial={{ opacity: 0, scale: 0 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.3 + i * 0.15 }}
-                className="absolute w-10 h-10 rounded-lg bg-white shadow-md flex items-center justify-center"
+                className="absolute w-7 h-7 rounded-lg bg-white shadow-md flex items-center justify-center"
                 style={{
-                  top: `calc(50% + ${pos.y}px)`,
-                  left: `calc(50% + ${pos.x}px)`,
+                  top: `calc(40% + ${pos.y}px)`,
+                  left: `calc(40% + ${pos.x}px)`,
                   transform: "translate(-50%, -50%)",
                 }}
               >
                 <div
-                  className="w-4 h-4 rounded"
+                  className="w-3 h-5 rounded"
                   style={{
-                    background: ["#a8e6cf", "#fdba74", "#fda4af", "#c4b5fd"][i],
+                    background: ["#2aa075ff", "#db8e3bff", "#ad4954ff", "#55439cff"][i],
                   }}
                 />
               </motion.div>
@@ -470,13 +486,13 @@ const AnimatedHeroDemo = () => {
       subtitle: "نظام اشتراكات متكامل",
       description: "مجاني • بلس • برو",
       icon: Crown,
-      color: "from-yellow-400 to-amber-500",
+      color: "from-yellow-700 to-amber-800",
       content: (
         <div className="flex justify-center gap-3">
           {[
-            { name: "مجاني", price: "0", color: "#a8e6cf" },
-            { name: "بلس", price: "49", color: "#c4b5fd" },
-            { name: "برو", price: "99", color: "#fdba74" },
+            { name: "مجاني", price: "0", color: "#36aa7fff" },
+            { name: "بلس", price: "49", color: "#4f39a8ff" },
+            { name: "برو", price: "99", color: "#ac7337ff" },
           ].map((plan, i) => (
             <motion.div
               key={plan.name}
@@ -494,8 +510,10 @@ const AnimatedHeroDemo = () => {
                 {i === 1 && <Sparkles size={14} className="text-white" />}
                 {i === 0 && <CheckCircle size={14} className="text-white" />}
               </div>
-              <p className="text-xs font-semibold">{plan.name}</p>
-              <p className="text-xs text-gray-400">{plan.price} ر.س</p>
+              <p className="text-base font-semibold text-gray-800">{plan.name}</p>
+              <p className="text-base text-gray-600 font-medium">
+                {plan.price} ر.س
+              </p>
             </motion.div>
           ))}
         </div>
@@ -568,7 +586,7 @@ const AnimatedHeroDemo = () => {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.2 }}
-                    className="text-gray-500"
+                    className="text-gray-700 font-medium"
                   >
                     {currentFeature.subtitle}
                   </motion.p>
@@ -576,7 +594,7 @@ const AnimatedHeroDemo = () => {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.3 }}
-                    className="text-xs text-gray-400 mt-0.5"
+                    className="text-xs text-gray-600 mt-0.5"
                   >
                     {currentFeature.description}
                   </motion.p>

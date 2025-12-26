@@ -87,7 +87,7 @@ function HeroSection() {
   return (
     <section
       className="relative min-h-screen flex items-center justify-center overflow-hidden"
-      style={{ paddingTop: "120px", paddingBottom: "60px" }}
+      style={{ paddingTop: "100px", paddingBottom: "40px" }}
     >
       {/* Background Decorations */}
       <div className="absolute inset-0 pointer-events-none">
@@ -106,18 +106,20 @@ function HeroSection() {
           {/* Heading */}
           <motion.h1
             variants={fadeInUp}
-            className="hero-title text-4xl sm:text-5xl md:text-6xl font-black leading-tight mb-lg"
-            style={{ color: "#1f2937" }}
+            className="text-4xl text-gray-700 sm:text-5xl md:text-6xl font-black leading-tight mb-6"
+
           >
             حوّل أفكارك إلى
             <br />
-            <span className="gradient-text">محتوى بصري احترافي</span>
+            <span className="bg-gradient-to-r from-[#1d7c59] via-[#5a3dbe] to-[#b37a3d] bg-clip-text text-transparent">
+              محتوى بصري احترافي
+            </span>
           </motion.h1>
 
           {/* Subtitle */}
           <motion.p
             variants={fadeInUp}
-            className="hero-subtitle text-lg sm:text-xl text-secondary max-w-2xl mx-auto mb-xl px-md"
+            className="text-lg sm:text-xl text-gray-500 max-w-2xl mx-auto mb-12 px-4"
           >
             أنشئ البحوث العلمية، العروض التقديمية، الخرائط الذهنية، والأسئلة
             بضغطة زر واحدة باستخدام قوة الذكاء الاصطناعي
@@ -126,22 +128,39 @@ function HeroSection() {
           {/* CTA Buttons */}
           <motion.div
             variants={fadeInUp}
-            className="cta-buttons flex items-center justify-center gap-md"
-            style={{ marginBottom: "60px" }}
+            className="cta-buttons mt-10 mb-10 md:flex-row flex flex-col flex-wrap items-center justify-center gap-4"
           >
             <Link to="/register">
-              <Button
-                size="lg"
-                icon={<ArrowLeft size={20} />}
-                iconPosition="end"
+              <motion.button
+                className="flex items-center cursor-pointer gap-3 px-8 py-4 rounded-xl font-bold text-lg text-white shadow-lg hover:shadow-xl transition-all"
+                style={{
+                  background:
+                    "linear-gradient(135deg, #1f2937 0%, #374151 100%)",
+                }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
               >
-                ابدأ مجاناً
-              </Button>
+                <span>ابدأ مجاناً</span>
+                <ArrowLeft size={20} />
+              </motion.button>
             </Link>
             <Link to="/features">
-              <Button variant="secondary" size="lg">
-                اكتشف المميزات
-              </Button>
+              <motion.button
+                className="flex items-center cursor-pointer gap-3 px-8 py-4 rounded-xl font-bold text-lg border-2 transition-all"
+                style={{
+                  borderColor: "#1f2937",
+                  color: "#1f2937",
+                  backgroundColor: "white",
+                }}
+                whileHover={{
+                  scale: 1.05,
+                  backgroundColor: "#1f2937",
+                  color: "white",
+                }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <span>اكتشف المميزات</span>
+              </motion.button>
             </Link>
           </motion.div>
 
@@ -294,7 +313,7 @@ function FeaturesSection() {
   };
 
   return (
-    <section className="section bg-bg-secondary relative overflow-hidden">
+    <section className="py-8 px-4 md:px-0 bg-gray-50 relative overflow-hidden">
       {/* Background Decorations */}
       <div className="absolute inset-0 pointer-events-none">
         <motion.div
@@ -339,29 +358,31 @@ function FeaturesSection() {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-100px" }}
-          className="text-center mb-3xl"
+          className="text-center mb-12"
         >
           <motion.div
             initial={{ scale: 0, rotate: -180 }}
             whileInView={{ scale: 1, rotate: 0 }}
             viewport={{ once: true }}
             transition={{ type: "spring", stiffness: 200, delay: 0.2 }}
-            className="w-16 h-16 rounded-2xl mx-auto mb-lg flex items-center justify-center"
+            className="w-16 h-16 rounded-2xl mx-auto mb-8 flex items-center justify-center"
             style={{
               background: "linear-gradient(135deg, #a8e6cf 0%, #93c5fd 100%)",
             }}
           >
             <Sparkles size={32} className="text-white" />
           </motion.div>
-          <h2 className="section-title">كل ما تحتاجه في منصة واحدة</h2>
-          <p className="section-subtitle">
+          <h2 className="text-3xl md:text-4xl lg:text-5xl text-gray-700 font-extrabold leading-tight mb-4">
+            كل ما تحتاجه في منصة واحدة
+          </h2>
+          <p className="text-lg md:text-xl text-gray-500 max-w-3xl mx-auto">
             أدوات ذكية مدعومة بالذكاء الاصطناعي لتسهيل رحلتك التعليمية
           </p>
         </motion.div>
 
         {/* Features Grid with Stagger Animation */}
         <motion.div
-          className="grid grid-4"
+          className="grid px-4 md:px-12 w-full grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8"
           variants={containerVariants}
           initial="hidden"
           whileInView="visible"
@@ -374,7 +395,7 @@ function FeaturesSection() {
               whileHover={{ y: -8, transition: { duration: 0.3 } }}
             >
               <div
-                className="h-full text-center p-xl rounded-3xl border border-gray-100 bg-white relative overflow-hidden group cursor-pointer"
+                className="h-full text-center p-8 rounded-3xl border border-gray-100 bg-white relative overflow-hidden group cursor-pointer"
                 style={{
                   boxShadow: "0 4px 20px rgba(0, 0, 0, 0.03)",
                   transition: "all 0.4s ease",
@@ -388,7 +409,7 @@ function FeaturesSection() {
 
                 {/* Animated Icon Container */}
                 <motion.div
-                  className="relative z-10 mx-auto mb-lg"
+                  className="relative z-10 mx-auto mb-8"
                   whileHover={{ scale: 1.1, rotate: [0, -10, 10, 0] }}
                   transition={{ duration: 0.5 }}
                 >
@@ -411,13 +432,10 @@ function FeaturesSection() {
 
                 {/* Content */}
                 <div className="relative z-10">
-                  <h3
-                    className="text-xl font-bold mb-sm group-hover:text-gray-900 transition-colors"
-                    style={{ color: "#1f2937" }}
-                  >
+                  <h3 className="text-xl mb-4 font-bold mb-sm group-hover:text-gray-900 transition-colors text-gray-700">
                     {feature.title}
                   </h3>
-                  <p className="text-secondary group-hover:text-gray-600 transition-colors">
+                  <p className="text-gray-600 group-hover:text-gray-500 font-meduim transition-colors">
                     {feature.description}
                   </p>
                 </div>
@@ -443,18 +461,56 @@ function FeaturesSection() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ delay: 0.5, duration: 0.6 }}
-          className="text-center"
-          style={{ marginTop: "80px" }}
+          className="text-center mt-12 md:mt-20 mb-12 md:mb-20"
         >
           <Link to="/features">
-            <Button
-              variant="secondary"
-              size="lg"
-              icon={<ArrowLeft size={20} />}
-              iconPosition="end"
+            <motion.button
+              className="flex mx-auto cursor-pointer items-center justify-center gap-3 cursor-pointer font-bold text-lg md:text-xl text-white shadow-lg rounded-xl relative overflow-hidden px-8 py-4 md:px-10 md:py-5"
+              style={{
+                background:
+                  "linear-gradient(135deg, #1d7c59 0%, #4826c2ff 50%, #9b6328ff 100%)",
+              }}
+              whileHover={{
+                scale: 1.05,
+                boxShadow: "0 20px 40px rgba(93, 61, 190, 0.3)",
+              }}
+              whileTap={{ scale: 0.95 }}
+              transition={{ duration: 0.3 }}
             >
-              استكشف جميع المميزات
-            </Button>
+              {/* Animated shine effect */}
+              <motion.div
+                className="absolute inset-0"
+                style={{
+                  background:
+                    "linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)",
+                }}
+                animate={{
+                  x: ["-100%", "200%"],
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  repeatDelay: 1,
+                }}
+              />
+
+              <span className="relative z-10">استكشف جميع المميزات</span>
+
+              {/* Animated icon */}
+              <motion.div
+                className="relative z-10"
+                animate={{
+                  x: [0, -5, 0],
+                }}
+                transition={{
+                  duration: 1.5,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+              >
+                <ArrowLeft size={22} />
+              </motion.div>
+            </motion.button>
           </Link>
         </motion.div>
       </div>
@@ -492,16 +548,18 @@ function HowItWorksSection() {
   ];
 
   return (
-    <section className="section">
+    <section className="py-8 px-4 md:py-12">
       <div className="container">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mb-3xl"
+          className="text-center mb-8"
         >
-          <h2 className="section-title">كيف يعمل القطار؟</h2>
-          <p className="section-subtitle">
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-extrabold leading-tight mb-4 text-gray-700">
+            كيف يعمل القطار؟
+          </h2>
+          <p className="text-lg md:text-xl text-gray-500 max-w-3xl mx-auto">
             أربع خطوات بسيطة لتحويل أفكارك إلى محتوى احترافي
           </p>
         </motion.div>
@@ -518,17 +576,25 @@ function HowItWorksSection() {
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.1 }}
-                className="flex items-start gap-lg"
+                className="flex items-start gap-6"
               >
-                <div className="feature-number shrink-0">{step.number}</div>
-                <div className="bg-white rounded-2xl p-lg border border-gray-100 flex-1 shadow-sm hover:shadow-md transition-shadow">
-                  <h3
-                    className="text-xl font-bold mb-sm"
-                    style={{ color: "#1f2937" }}
-                  >
+                <div
+                  className="w-14 h-14 rounded-2xl flex items-center justify-center text-white font-extrabold text-2xl shrink-0"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, #36a079ff 0%, #4177b4ff 100%)",
+                    boxShadow: "0 4px 15px rgba(168, 230, 207, 0.4)",
+                  }}
+                >
+                  {step.number}
+                </div>
+                <div className="bg-white rounded-2xl p-6 border border-gray-100 flex-1 shadow-sm hover:shadow-md transition-shadow">
+                  <h3 className="text-xl font-bold mb-2 text-gray-700">
                     {step.title}
                   </h3>
-                  <p className="text-secondary">{step.description}</p>
+                  <p className="text-gray-500 font-medium text-base">
+                    {step.description}
+                  </p>
                 </div>
               </motion.div>
             ))}
@@ -565,33 +631,49 @@ function UseCasesSection() {
   ];
 
   return (
-    <section className="section bg-primary text-white">
+    <section className="py-8 px-4 md:py-12 md:px-10 bg-gradient-to-r from-white via-gray-50 to-white">
       <div className="container">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mb-3xl"
+          className="text-center mb-12"
         >
-          <h2 className="section-title text-black">حالات الاستخدام</h2>
-          <p className="section-subtitle text-gray-400">
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-extrabold leading-tight mb-4 text-gray-700">
+            حالات الاستخدام
+          </h2>
+          <p className="text-lg md:text-xl text-gray-500 max-w-3xl mx-auto">
             القطار مناسب للطلاب، المعلمين، الباحثين، وكل من يسعى للتميز
           </p>
         </motion.div>
 
         <motion.div
-          className="grid grid-4"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
           variants={staggerContainer}
           initial="initial"
           whileInView="animate"
           viewport={{ once: true }}
         >
           {useCases.map((useCase, index) => (
-            <motion.div key={index} variants={fadeInUp}>
-              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-lg text-center hover:bg-white/20 transition-colors cursor-pointer">
-                <div className="text-6xl mb-lg">{useCase.image}</div>
-                <h3 className="text-xl font-bold mb-sm">{useCase.title}</h3>
-                <p className="text-gray-400">{useCase.description}</p>
+            <motion.div
+              key={index}
+              variants={fadeInUp}
+              whileHover={{ y: -8, transition: { duration: 0.3 } }}
+            >
+              <div className="bg-white rounded-2xl p-6 text-center border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer h-full">
+                <motion.div
+                  className="text-6xl mb-6"
+                  whileHover={{ scale: 1.1, rotate: [0, -5, 5, 0] }}
+                  transition={{ duration: 0.5 }}
+                >
+                  {useCase.image}
+                </motion.div>
+                <h3 className="text-xl font-bold mb-3 text-gray-700">
+                  {useCase.title}
+                </h3>
+                <p className="text-gray-500 font-medium">
+                  {useCase.description}
+                </p>
               </div>
             </motion.div>
           ))}
@@ -611,21 +693,39 @@ function StatsSection() {
   ];
 
   return (
-    <section className="py-xl bg-gradient-to-r from-accent-green/10 via-accent-purple/10 to-accent-orange/10">
+    <section className="py-8 px-4 md:py-12 md:px-10 bg-gradient-to-r from-white via-gray-50 to-white">
       <div className="container">
         <motion.div
-          className="grid grid-4"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
           variants={staggerContainer}
           initial="initial"
           whileInView="animate"
           viewport={{ once: true }}
         >
           {stats.map((stat, index) => (
-            <motion.div key={index} variants={fadeInUp} className="text-center">
-              <div className="text-4xl md:text-5xl font-black gradient-text mb-sm">
-                {stat.value}
+            <motion.div
+              key={index}
+              variants={fadeInUp}
+              className="text-center"
+              whileHover={{ y: -8, scale: 1.02, transition: { duration: 0.3 } }}
+            >
+              <div className="bg-white rounded-2xl py-8 px-6 border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer">
+                <div
+                  className="text-4xl md:text-5xl font-black mb-3"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, #167451ff 0%, #492cb1ff 50%, #8d5c27ff 100%)",
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                    backgroundClip: "text",
+                  }}
+                >
+                  {stat.value}
+                </div>
+                <p className="text-gray-700 font-bold text-base">
+                  {stat.label}
+                </p>
               </div>
-              <p className="text-secondary font-medium">{stat.label}</p>
             </motion.div>
           ))}
         </motion.div>
@@ -636,6 +736,8 @@ function StatsSection() {
 
 // Testimonials Section
 function TestimonialsSection() {
+  const [currentIndex, setCurrentIndex] = React.useState(0);
+
   const testimonials = [
     {
       name: "أحمد محمد",
@@ -661,63 +763,127 @@ function TestimonialsSection() {
         "أداة رائعة للباحثين. تساعدني في تنظيم أفكاري وإنشاء خرائط ذهنية احترافية.",
       rating: 5,
     },
+    {
+      name: "نورة السالم",
+      role: "طالبة ثانوية",
+      avatar: "ن",
+      content:
+        "ساعدني القطار في الاستعداد للاختبارات بإنشاء أسئلة تدريبية من ملخصاتي. أصبحت دراستي أكثر فعالية.",
+      rating: 5,
+    },
+    {
+      name: "محمد الشمري",
+      role: "طبيب",
+      avatar: "م",
+      content:
+        "استخدم القطار لإنشاء عروض تقديمية طبية للمؤتمرات. الجودة احترافية والوقت المستغرق قليل جداً.",
+      rating: 5,
+    },
+    {
+      name: "فاطمة حسن",
+      role: "صانعة محتوى",
+      avatar: "ف",
+      content:
+        "القطار غيّر طريقة عملي تماماً. أستطيع الآن إنتاج محتوى تعليمي بجودة عالية في وقت قياسي.",
+      rating: 5,
+    },
   ];
 
+  // Auto-advance carousel every 4 seconds
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % testimonials.length);
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [testimonials.length]);
+
   return (
-    <section className="section">
+    <section className="py-8 px-4 md:py-12 md:px-10 bg-gradient-to-r from-white via-gray-50 to-white overflow-hidden">
       <div className="container">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mb-3xl"
+          className="text-center mb-12"
         >
-          <h2 className="section-title">ماذا يقول مستخدمونا</h2>
-          <p className="section-subtitle">
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-extrabold leading-tight mb-4 text-gray-700">
+            ماذا يقول مستخدمونا
+          </h2>
+          <p className="text-lg md:text-xl text-gray-500 max-w-3xl mx-auto">
             آلاف المستخدمين يثقون بالقطار لإنجاز أعمالهم
           </p>
         </motion.div>
 
-        <motion.div
-          className="grid grid-3"
-          variants={staggerContainer}
-          initial="initial"
-          whileInView="animate"
-          viewport={{ once: true }}
-        >
-          {testimonials.map((testimonial, index) => (
-            <motion.div key={index} variants={fadeInUp}>
-              <Card className="h-full">
-                {/* Rating */}
-                <div className="flex gap-1 mb-lg">
-                  {[...Array(testimonial.rating)].map((_, i) => (
-                    <Star
-                      key={i}
-                      size={18}
-                      className="fill-yellow-400 text-yellow-400"
-                    />
-                  ))}
-                </div>
+        {/* Carousel - Shows 1 large card at a time */}
+        <div className="relative max-w-3xl mx-auto">
+          <motion.div
+            key={currentIndex}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.6 }}
+          >
+            <div className="bg-white rounded-2xl p-8 md:p-10 border border-gray-100 shadow-lg hover:shadow-xl transition-all duration-300">
+              {/* Rating */}
+              <div className="flex justify-center gap-1 mb-6">
+                {[...Array(testimonials[currentIndex].rating)].map((_, i) => (
+                  <Star
+                    key={i}
+                    size={22}
+                    className="fill-yellow-400 text-yellow-400"
+                  />
+                ))}
+              </div>
 
-                {/* Content */}
-                <p className="text-lg mb-lg leading-relaxed">
-                  {testimonial.content}
-                </p>
+              {/* Content */}
+              <p className="text-xl mb-8 leading-relaxed text-gray-600 font-medium text-center">
+                "{testimonials[currentIndex].content}"
+              </p>
 
-                {/* Author */}
-                <div className="flex items-center gap-md">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-accent-green to-accent-purple flex items-center justify-center text-white font-bold">
-                    {testimonial.avatar}
-                  </div>
-                  <div>
-                    <p className="font-bold">{testimonial.name}</p>
-                    <p className="text-sm text-muted">{testimonial.role}</p>
-                  </div>
+              {/* Author */}
+              <div className="flex items-center justify-center gap-4">
+                <div
+                  className="w-16 h-16 rounded-full flex items-center justify-center text-white font-bold text-xl"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, #167451ff 0%, #492cb1ff 100%)",
+                  }}
+                >
+                  {testimonials[currentIndex].avatar}
                 </div>
-              </Card>
-            </motion.div>
-          ))}
-        </motion.div>
+                <div className="text-right">
+                  <p className="font-bold text-gray-700 text-lg">
+                    {testimonials[currentIndex].name}
+                  </p>
+                  <p className="text-base text-gray-500">
+                    {testimonials[currentIndex].role}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Carousel indicators */}
+          <div className="flex justify-center gap-2 mt-8">
+            {testimonials.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrentIndex(index)}
+                className="transition-all duration-300"
+                style={{
+                  width: currentIndex === index ? "32px" : "8px",
+                  height: "8px",
+                  borderRadius: "4px",
+                  background:
+                    currentIndex === index
+                      ? "linear-gradient(135deg, #167451ff 0%, #492cb1ff 100%)"
+                      : "#d1d5db",
+                }}
+              />
+            ))}
+          </div>
+        </div>
       </div>
     </section>
   );
@@ -783,7 +949,7 @@ function FAQSection() {
   };
 
   return (
-    <section className="section bg-bg-secondary relative overflow-hidden">
+    <section className="py-8 px-4 md:py-12 md:px-10 bg-gradient-to-r from-white via-gray-50 to-white relative overflow-hidden">
       {/* Background Decoration */}
       <div className="absolute inset-0 pointer-events-none">
         <motion.div
@@ -817,7 +983,7 @@ function FAQSection() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-100px" }}
           transition={{ duration: 1, ease: "easeOut" }}
-          className="text-center mb-3xl"
+          className="text-center mb-12"
         >
           <motion.div
             initial={{ scale: 0, rotate: -180 }}
@@ -829,15 +995,20 @@ function FAQSection() {
               damping: 15,
               delay: 0.3,
             }}
-            className="w-16 h-16 rounded-2xl mx-auto mb-lg flex items-center justify-center"
+            className="w-16 h-16 rounded-2xl mx-auto mb-6 flex items-center justify-center"
             style={{
-              background: "linear-gradient(135deg, #c4b5fd 0%, #a8e6cf 100%)",
+              background:
+                "linear-gradient(135deg, #167451ff 0%, #492cb1ff 100%)",
             }}
           >
             <HelpCircle size={32} className="text-white" />
           </motion.div>
-          <h2 className="section-title">الأسئلة الشائعة</h2>
-          <p className="section-subtitle">إجابات على الأسئلة الأكثر شيوعاً</p>
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-extrabold leading-tight mb-4 text-gray-700">
+            الأسئلة الشائعة
+          </h2>
+          <p className="text-lg md:text-xl text-gray-500 max-w-3xl mx-auto">
+            إجابات على الأسئلة الأكثر شيوعاً
+          </p>
         </motion.div>
 
         {/* FAQ Items with Stagger Animation */}
@@ -856,22 +1027,6 @@ function FAQSection() {
             ))}
           </Accordion>
         </motion.div>
-
-        {/* Bottom Help CTA */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.8, duration: 0.8 }}
-          className="text-center mt-3xl"
-        >
-          <p className="text-secondary mb-md">لم تجد إجابة لسؤالك؟</p>
-          <Link to="/contact">
-            <Button variant="secondary" icon={<MessageSquare size={18} />}>
-              تواصل معنا
-            </Button>
-          </Link>
-        </motion.div>
       </div>
     </section>
   );
@@ -880,41 +1035,129 @@ function FAQSection() {
 // CTA Section
 function CTASection() {
   return (
-    <section className="section">
+    <section className="py-8 px-4 md:py-12 md:px-10">
       <div className="container">
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true }}
-          className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary via-primary to-gray-900 text-white p-xl md:p-3xl text-center"
+          transition={{ duration: 0.6 }}
+          className="relative overflow-hidden rounded-3xl text-white p-8 md:p-12 lg:p-16 text-center"
+          style={{
+            background:
+              "linear-gradient(135deg, #167451ff 0%, #492cb1ff 50%, #8d5c27ff 100%)",
+          }}
         >
           {/* Background Decorations */}
           <div className="absolute inset-0 pointer-events-none">
-            <div className="blob blob-green w-64 h-64 top-0 right-0 opacity-20" />
-            <div className="blob blob-purple w-48 h-48 bottom-0 left-0 opacity-20" />
+            <motion.div
+              animate={{
+                scale: [1, 1.2, 1],
+                opacity: [0.15, 0.25, 0.15],
+              }}
+              transition={{
+                duration: 8,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+              className="absolute w-96 h-96 rounded-full top-0 right-0"
+              style={{
+                background:
+                  "radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%)",
+              }}
+            />
+            <motion.div
+              animate={{
+                scale: [1, 1.3, 1],
+                opacity: [0.1, 0.2, 0.1],
+              }}
+              transition={{
+                duration: 10,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+              className="absolute w-80 h-80 rounded-full bottom-0 left-0"
+              style={{
+                background:
+                  "radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%)",
+              }}
+            />
           </div>
 
           <div className="relative z-10">
-            <h2 className="text-4xl md:text-5xl font-black mb-lg">
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.6 }}
+              className="text-4xl md:text-5xl font-black mb-6"
+            >
               جاهز لتحويل أفكارك؟
-            </h2>
-            <p className="text-xl text-gray-400 max-w-2xl mx-auto mb-xl">
+            </motion.h2>
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3, duration: 0.6 }}
+              className="text-lg md:text-xl lg:text-2xl text-gray-300 max-w-2xl mx-auto mb-10 font-medium"
+            >
               انضم لآلاف المستخدمين الذين يستخدمون القطار لإنجاز أعمالهم بسرعة
               واحترافية
-            </p>
-            <Link to="/register">
-              <Button
-                variant="gradient"
-                size="lg"
-                icon={<ArrowLeft size={20} />}
-                iconPosition="end"
-              >
-                ابدأ مجاناً الآن
-              </Button>
-            </Link>
-            <p className="text-sm text-gray-500 mt-lg">
-              لا حاجة لبطاقة ائتمان • 500 رصيد مجاني
-            </p>
+            </motion.p>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4, duration: 0.6 }}
+            >
+              <Link to="/register">
+                <motion.button
+                  className="flex items-center mx-auto justify-center gap-3 cursor-pointer font-bold text-lg md:text-xl text-gray-800 shadow-xl rounded-xl relative overflow-hidden px-8 py-4 md:px-12 md:py-5"
+                  style={{
+                    background: "white",
+                  }}
+                  whileHover={{
+                    scale: 1.05,
+                    background:
+                      "linear-gradient(135deg, #167451ff 0%, #492cb1ff 50%, #8d5c27ff 100%)",
+                    color: "white",
+                  }}
+                  whileTap={{ scale: 0.95 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  {/* Animated shine effect */}
+                  <motion.div
+                    className="absolute inset-0"
+                    style={{
+                      background:
+                        "linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)",
+                    }}
+                    animate={{
+                      x: ["-100%", "200%"],
+                    }}
+                    transition={{
+                      duration: 2.5,
+                      repeat: Infinity,
+                      repeatDelay: 1.5,
+                    }}
+                  />
+
+                  <span className="relative z-10">ابدأ مجاناً الآن</span>
+
+                  {/* Animated icon */}
+                  <motion.div
+                    className="relative z-10"
+                    animate={{
+                      x: [0, -5, 0],
+                    }}
+                    transition={{
+                      duration: 1.5,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                    }}
+                  >
+                    <ArrowLeft size={24} />
+                  </motion.div>
+                </motion.button>
+              </Link>
+            </motion.div>
           </div>
         </motion.div>
       </div>

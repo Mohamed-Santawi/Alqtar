@@ -8,6 +8,7 @@ import { Accordion, AccordionItem } from "../components/ui/Accordion";
 
 export default function Pricing() {
   const [isAnnual, setIsAnnual] = useState(true);
+  const [selectedPlan, setSelectedPlan] = useState(null);
 
   const plans = [
     {
@@ -103,7 +104,7 @@ export default function Pricing() {
     <div className="min-h-screen">
       <Header />
 
-      <main style={{ paddingTop: "120px", paddingBottom: "80px" }}>
+      <main className="pt-24 pb-16 px-4 md:pt-30 md:pb-20">
         <div className="container">
           {/* Header */}
           <motion.div
@@ -111,15 +112,12 @@ export default function Pricing() {
             animate={{ opacity: 1, y: 0 }}
             className="text-center max-w-3xl mx-auto mb-xl"
           >
-            <h1
-              className="text-4xl md:text-5xl font-black mb-md"
-              style={{ color: "#1f2937" }}
-            >
+            <h1 className="text-4xl md:text-5xl font-black mb-4 text-gray-700">
               أنشئ محتوى احترافي
               <br />
               <span className="gradient-text">أسرع بـ 10 مرات</span>
             </h1>
-            <p className="text-xl" style={{ color: "#4b5563" }}>
+            <p className="text-lg md:text-xl text-gray-600 mb-4">
               اختر الخطة المناسبة لاحتياجاتك
             </p>
           </motion.div>
@@ -129,26 +127,17 @@ export default function Pricing() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="flex items-center justify-center"
-            style={{ marginBottom: "60px" }}
+            className="flex items-center justify-center mb-12 md:mb-15"
           >
-            <div
-              className="inline-flex items-center gap-4 p-2 rounded-full"
-              style={{
-                backgroundColor: "#f3f4f6",
-                border: "1px solid #e5e7eb",
-              }}
-            >
+            <div className="inline-flex items-center gap-4 p-2 rounded-full bg-gray-100 border border-gray-200">
               {/* Monthly Option */}
               <button
                 onClick={() => setIsAnnual(false)}
-                className="px-6 py-2 rounded-full font-medium transition-all duration-300"
-                style={{
-                  backgroundColor: !isAnnual ? "#ffffff" : "transparent",
-                  color: !isAnnual ? "#1f2937" : "#6b7280",
-                  boxShadow: !isAnnual ? "0 2px 8px rgba(0,0,0,0.1)" : "none",
-                  cursor: "pointer",
-                }}
+                className={`px-6 py-2 text-lg rounded-full font-medium transition-all duration-300 cursor-pointer ${
+                  !isAnnual
+                    ? "bg-white text-gray-800 shadow-md"
+                    : "bg-transparent text-gray-500"
+                }`}
               >
                 شهري
               </button>
@@ -156,20 +145,15 @@ export default function Pricing() {
               {/* Annual Option */}
               <button
                 onClick={() => setIsAnnual(true)}
-                className="px-6 py-2 rounded-full font-medium transition-all duration-300 flex items-center gap-2"
-                style={{
-                  backgroundColor: isAnnual ? "#ffffff" : "transparent",
-                  color: isAnnual ? "#1f2937" : "#6b7280",
-                  boxShadow: isAnnual ? "0 2px 8px rgba(0,0,0,0.1)" : "none",
-                  cursor: "pointer",
-                }}
+                className={`px-6 py-2 text-lg rounded-full font-medium transition-all duration-300 flex items-center gap-2 cursor-pointer ${
+                  isAnnual
+                    ? "bg-white text-gray-800 shadow-md"
+                    : "bg-transparent text-gray-500"
+                }`}
               >
                 سنوي
                 {isAnnual && (
-                  <span
-                    className="px-2 py-0.5 rounded-full text-xs font-bold"
-                    style={{ backgroundColor: "#a8e6cf", color: "#1f2937" }}
-                  >
+                  <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-green-200 text-gray-800">
                     -25%
                   </span>
                 )}
@@ -178,105 +162,155 @@ export default function Pricing() {
           </motion.div>
 
           {/* Pricing Cards */}
-          <div
-            className="grid grid-3 max-w-5xl mx-auto mt-6xl"
-            style={{ marginBottom: "80px" }}
-          >
-            {plans.map((plan, index) => (
-              <motion.div
-                key={plan.name}
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 + index * 0.1 }}
-                className={`relative rounded-3xl p-lg ${
-                  plan.highlighted
-                    ? "shadow-2xl scale-105 border-2"
-                    : "bg-white border border-gray-200"
-                }`}
-                style={
-                  plan.highlighted
-                    ? {
-                        background:
-                          "linear-gradient(135deg, rgba(168, 230, 207, 0.15) 0%, rgba(147, 197, 253, 0.15) 100%)",
-                        borderColor: "#a8e6cf",
-                      }
-                    : {}
-                }
-              >
-                {/* Badge */}
-                {plan.badge && (
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                    <span
-                      className="font-bold text-sm px-4 py-1 rounded-full"
-                      style={{ backgroundColor: "#a8e6cf", color: "#1f2937" }}
-                    >
-                      {plan.badge}
-                    </span>
-                  </div>
-                )}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 md:gap-8 max-w-6xl mx-auto mt-12 md:mt-16 mb-16 md:mb-20">
+            {plans.map((plan, index) => {
+              const isSelected = selectedPlan === plan.name;
 
-                {/* Icon */}
+              return (
                 <div
-                  className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${plan.color} flex items-center justify-center mb-lg`}
+                  key={plan.name}
+                  onClick={() => setSelectedPlan(plan.name)}
+                  className="block cursor-pointer"
                 >
-                  <plan.icon size={28} className="text-white" />
-                </div>
-
-                {/* Name & Description */}
-                <h3
-                  className="text-2xl font-bold mb-sm"
-                  style={{ color: "#1f2937" }}
-                >
-                  {plan.name}
-                </h3>
-                <p
-                  style={{
-                    color: "#6b7280",
-                    marginBottom: "24px",
-                  }}
-                >
-                  {plan.description}
-                </p>
-
-                {/* Price */}
-                <div className="mb-lg">
-                  <span
-                    className="text-4xl font-black"
-                    style={{ color: "#1f2937" }}
+                  <motion.div
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{
+                      opacity: 1,
+                      y: 0,
+                      scale: isSelected ? 1.05 : 1,
+                    }}
+                    whileHover={{
+                      y: -8,
+                      scale: isSelected ? 1.05 : 1.03,
+                      transition: { duration: 0.3 },
+                    }}
+                    transition={{ delay: 0.1 + index * 0.1, duration: 0.3 }}
+                    className={`relative rounded-3xl p-6 md:p-8 transition-all duration-300 ${
+                      isSelected
+                        ? "shadow-2xl border-4 border-green-500"
+                        : plan.highlighted
+                        ? "shadow-2xl border-2 border-green-300 hover:border-green-400 hover:shadow-3xl"
+                        : "bg-white border border-gray-200 hover:border-gray-300 hover:shadow-xl"
+                    }`}
+                    style={
+                      plan.highlighted
+                        ? {
+                            background:
+                              "linear-gradient(135deg, rgba(168, 230, 207, 0.15) 0%, rgba(147, 197, 253, 0.15) 100%)",
+                          }
+                        : {}
+                    }
                   >
-                    {plan.price[isAnnual ? "annual" : "monthly"]}
-                  </span>
-                  {plan.price.monthly > 0 && (
-                    <span style={{ color: "#6b7280" }}> ريال/شهر</span>
-                  )}
-                  {plan.price.monthly === 0 && (
-                    <span style={{ color: "#6b7280" }}> مجاناً للأبد</span>
-                  )}
+                    {/* Badge */}
+                    {plan.badge && (
+                      <div className="absolute -top-4 left-1/2 -translate-x-1/2 pointer-events-none">
+                        <span className="font-bold text-sm px-4 py-1 rounded-full bg-green-200 text-gray-800">
+                          {plan.badge}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Selected Badge */}
+                    {isSelected && (
+                      <div className="absolute -top-4 right-4 pointer-events-none">
+                        <motion.span
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          className="flex items-center gap-1 font-bold text-sm px-3 py-1 rounded-full bg-green-500 text-white"
+                        >
+                          <Check size={16} />
+                          مُحدد
+                        </motion.span>
+                      </div>
+                    )}
+
+                    {/* Icon */}
+                    <motion.div
+                      className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${plan.color} flex items-center justify-center mb-6`}
+                      whileHover={{ rotate: 360 }}
+                      transition={{ duration: 0.6 }}
+                    >
+                      <plan.icon size={28} className="text-white" />
+                    </motion.div>
+
+                    {/* Name & Description */}
+                    <h3 className="text-2xl font-bold mb-3 text-gray-800">
+                      {plan.name}
+                    </h3>
+                    <p className="text-gray-500 mb-6">{plan.description}</p>
+
+                    {/* Price */}
+                    <div className="mb-6">
+                      <span className="text-4xl font-black text-gray-800">
+                        {plan.price[isAnnual ? "annual" : "monthly"]}
+                      </span>
+                      {plan.price.monthly > 0 && (
+                        <span className="text-gray-500"> ريال/شهر</span>
+                      )}
+                      {plan.price.monthly === 0 && (
+                        <span className="text-gray-500"> مجاناً للأبد</span>
+                      )}
+                    </div>
+
+                    {/* CTA Button */}
+                    <Link
+                      to="/checkout"
+                      state={{
+                        plan: plan.name,
+                        price: plan.price[isAnnual ? "annual" : "monthly"],
+                        billing: isAnnual ? "annual" : "monthly",
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      className="block mb-6"
+                    >
+                      <motion.button
+                        className="w-full cursor-pointer flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold text-lg text-white shadow-lg relative overflow-hidden"
+                        style={{
+                          background: plan.highlighted
+                            ? "linear-gradient(135deg, #1d7c59 0%, #4826c2ff 50%, #9b6328ff 100%)"
+                            : "linear-gradient(135deg, #1f2937 0%, #374151 100%)",
+                        }}
+                        whileHover={{
+                          scale: 1.05,
+                          boxShadow: "0 15px 30px rgba(0,0,0,0.2)",
+                        }}
+                        whileTap={{ scale: 0.95 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        {/* Shine effect */}
+                        <motion.div
+                          className="absolute inset-0"
+                          style={{
+                            background:
+                              "linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)",
+                          }}
+                          animate={{
+                            x: ["-100%", "200%"],
+                          }}
+                          transition={{
+                            duration: 2,
+                            repeat: Infinity,
+                            repeatDelay: 1,
+                          }}
+                        />
+                        <span className="relative z-10">{plan.cta}</span>
+                        <ArrowLeft size={18} className="relative z-10" />
+                      </motion.button>
+                    </Link>
+
+                    {/* Features */}
+                    <ul className="space-y-3">
+                      {plan.features.map((feature, i) => (
+                        <li key={i} className="flex items-center gap-2">
+                          <Check size={18} className="text-green-500" />
+                          <span className="text-gray-600">{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </motion.div>
                 </div>
-
-                {/* CTA */}
-                <Link to="/register" className="block mb-lg">
-                  <Button
-                    variant={plan.highlighted ? "gradient" : "primary"}
-                    className="w-full"
-                    icon={<ArrowLeft size={18} />}
-                    iconPosition="end"
-                  >
-                    {plan.cta}
-                  </Button>
-                </Link>
-
-                {/* Features */}
-                <ul className="space-y-3">
-                  {plan.features.map((feature, i) => (
-                    <li key={i} className="flex items-center gap-2">
-                      <Check size={18} style={{ color: "#22c55e" }} />
-                      <span style={{ color: "#4b5563" }}>{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-              </motion.div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Enterprise CTA */}
@@ -286,13 +320,10 @@ export default function Pricing() {
             viewport={{ once: true }}
             className="text-center bg-bg-secondary rounded-3xl p-xl mb-3xl"
           >
-            <h3
-              className="text-2xl font-bold mb-sm"
-              style={{ color: "#1f2937" }}
-            >
+            <h3 className="text-2xl font-bold mb-3 text-gray-800">
               تبحث عن خطة مؤسسية؟
             </h3>
-            <p className="text-secondary mb-lg">
+            <p className="text-gray-600 mb-6">
               للمؤسسات الكبيرة والاحتياجات المخصصة، تواصل مع فريق المبيعات
             </p>
             <Button variant="secondary">تواصل معنا</Button>
@@ -305,10 +336,7 @@ export default function Pricing() {
             viewport={{ once: true }}
             className="max-w-3xl mx-auto"
           >
-            <h2
-              className="text-3xl font-bold text-center mb-xl"
-              style={{ color: "#1f2937" }}
-            >
+            <h2 className="text-3xl font-bold text-center mb-12 md:mb-16 text-gray-800">
               الأسئلة الشائعة
             </h2>
             <Accordion>

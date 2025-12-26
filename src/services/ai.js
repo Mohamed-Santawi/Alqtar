@@ -5,7 +5,8 @@
 
 const API_URL =
   import.meta.env.VITE_AIML_API_URL || "https://api.aimlapi.com/v1";
-const API_KEY = import.meta.env.VITE_AIML_API_KEY;
+const API_KEY =
+  import.meta.env.VITE_AIML_API_KEY || "24846e8f3bce499aaf46ae76bb75f388";
 
 /**
  * Make a chat completion request
@@ -13,27 +14,38 @@ const API_KEY = import.meta.env.VITE_AIML_API_KEY;
  * @param {Object} options - Additional options like model, temperature, etc.
  */
 export async function chatCompletion(messages, options = {}) {
-  const response = await fetch(`${API_URL}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: options.model || "gpt-4o",
-      messages,
-      temperature: options.temperature || 0.7,
-      max_tokens: options.maxTokens || 4096,
-      ...options,
-    }),
-  });
+  try {
+    const response = await fetch(`${API_URL}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: options.model || "openai/gpt-5-nano-2025-08-07",
+        messages,
+        temperature: options.temperature || 0.7,
+        max_tokens: options.maxTokens || 4096,
+        ...options,
+      }),
+    });
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || "AI API request failed");
+    if (!response.ok) {
+      let errorMessage = "AI API request failed";
+      try {
+        const error = await response.json();
+        errorMessage = error.error?.message || error.message || errorMessage;
+      } catch (e) {
+        errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+      }
+      throw new Error(errorMessage);
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error("Error in chatCompletion:", error);
+    throw error;
   }
-
-  return response.json();
 }
 
 /**
@@ -50,7 +62,7 @@ export async function streamChatCompletion(messages, onChunk, options = {}) {
       Authorization: `Bearer ${API_KEY}`,
     },
     body: JSON.stringify({
-      model: options.model || "gpt-4o",
+      model: options.model || "openai/gpt-5-nano-2025-08-07",
       messages,
       temperature: options.temperature || 0.7,
       max_tokens: options.maxTokens || 4096,
@@ -144,40 +156,72 @@ export async function analyzeImage(
 }
 
 /**
- * Generate research paper content
+ * Generate research paper content using GPT-5 Nano
  * @param {string} topic - The research topic
- * @param {Array} sections - Sections to include
+ * @param {string} researcherName - Researcher name
+ * @param {string} supervisorName - Supervisor name
+ * @param {Array} sections - Sections to include (checked options)
+ * @param {string} userMessage - Additional user instructions from chat
  * @param {Object} options - Additional options
  */
 export async function generateResearchPaper(
   topic,
+  researcherName = "",
+  supervisorName = "",
   sections = [],
+  userMessage = "",
   options = {}
 ) {
+  // Build concise sections list
   const sectionsList =
     sections.length > 0
       ? sections.join("، ")
-      : "مقدمة، فهرس المحتويات، المنهجية، النتائج، الخاتمة، المراجع";
+      : "المقدمة، فهرس المحتوى، الملخص، المنهجية، النتائج، الخاتمة، المراجع";
+
+  // Build optimized prompt - concise but complete
+  let userPrompt = `موضوع: "${topic}"\n`;
+  if (researcherName) userPrompt += `باحث: ${researcherName}\n`;
+  if (supervisorName) userPrompt += `مشرف: ${supervisorName}\n`;
+  userPrompt += `أقسام: ${sectionsList}\n`;
+  if (userMessage) userPrompt += `ملاحظات: ${userMessage}\n`;
 
   const messages = [
     {
       role: "system",
-      content: `أنت باحث أكاديمي متخصص في كتابة البحوث العلمية باللغة العربية.
-قم بإنشاء بحث علمي شامل ومنظم مع الالتزام بالمعايير الأكاديمية.
-استخدم لغة علمية رصينة ودقيقة.`,
+      content: `أنت باحث أكاديمي متخصص. اكتب بحثاً علمياً كاملاً بلغة عربية رصينة ومعايير أكاديمية.
+
+قواعد مهمة جداً:
+- اكتب المحتوى بالعربية فقط
+- لا تكتب أي أكواد LaTeX أو HTML أو أي لغة برمجة
+- لا تكتب أي تعليمات تنفيذ أو إرشادات
+- لا تكتب أي ملاحظات تمهيدية أو تنبيهات
+- ابدأ مباشرة بعنوان البحث ثم المحتوى
+- استخدم تنسيق نصي بسيط بالعربية فقط
+- لا تذكر أي شيء عن الخطوط أو الألوان أو التنسيق`,
     },
     {
       role: "user",
-      content: `اكتب بحثاً علمياً حول الموضوع التالي: "${topic}"
-يجب أن يتضمن البحث الأقسام التالية: ${sectionsList}
-${options.additionalInstructions || ""}`,
+      content: userPrompt,
     },
   ];
 
-  return chatCompletion(messages, {
-    model: options.model || "gpt-4o",
-    maxTokens: options.maxTokens || 8000,
+  const response = await chatCompletion(messages, {
+    model: options.model || "openai/gpt-5-nano-2025-08-07",
+    maxTokens: options.maxTokens || 8000, // Reduced from 12000 for efficiency
+    temperature: options.temperature || 0.7,
   });
+
+  // Log token usage for monitoring
+  if (response.usage) {
+    console.log("📊 Token Usage:", {
+      prompt: response.usage.prompt_tokens,
+      completion: response.usage.completion_tokens,
+      total: response.usage.total_tokens,
+      cost: `${(response.usage.total_tokens * 0.000001).toFixed(6)} credits`, // Approximate
+    });
+  }
+
+  return response;
 }
 
 /**

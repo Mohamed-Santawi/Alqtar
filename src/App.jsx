@@ -7,15 +7,18 @@ import {
 } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { Loading } from "./components/ui";
+import "./App.css";
 
 // Lazy load pages for better performance
 const Landing = lazy(() => import("./pages/Landing"));
 const Login = lazy(() => import("./pages/Auth/Login"));
 const Register = lazy(() => import("./pages/Auth/Register"));
 const Pricing = lazy(() => import("./pages/Pricing"));
+const Checkout = lazy(() => import("./pages/Checkout"));
 const About = lazy(() => import("./pages/About"));
 const AdminLogin = lazy(() => import("./pages/Admin/AdminLogin"));
 const Dashboard = lazy(() => import("./pages/Dashboard/Dashboard"));
+const ResearchNew = lazy(() => import("./pages/Dashboard/ResearchNew"));
 
 // Protected Route Component (for regular users)
 function ProtectedRoute({ children }) {
@@ -78,6 +81,7 @@ function App() {
             {/* Public Routes */}
             <Route path="/" element={<Landing />} />
             <Route path="/pricing" element={<Pricing />} />
+            <Route path="/checkout" element={<Checkout />} />
             <Route path="/about" element={<About />} />
 
             {/* Admin Routes */}
@@ -102,6 +106,14 @@ function App() {
             />
 
             {/* Protected Routes */}
+            <Route
+              path="/dashboard/research/new"
+              element={
+                <ProtectedRoute>
+                  <ResearchNew />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/dashboard"
               element={

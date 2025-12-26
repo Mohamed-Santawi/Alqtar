@@ -46,31 +46,33 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex flex-col lg:flex-row bg-gradient-to-br from-gray-50 to-stone-100">
       {/* Left Side - Form */}
-      <div className="flex-1 flex items-center justify-center p-lg">
+      <div className="flex-1 flex items-center justify-center px-4 py-8 sm:px-6 lg:px-12">
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           className="w-full max-w-md"
         >
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 mb-xl">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-accent-green to-accent-blue flex items-center justify-center">
+          <Link to="/" className="flex items-center gap-2 mb-8 lg:mb-12">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500 to-blue-500 flex items-center justify-center shadow-lg">
               <span className="text-white font-bold text-xl">ق</span>
             </div>
-            <span className="text-xl font-bold">القطار</span>
+            <span className="text-xl font-bold text-gray-800">القطار</span>
           </Link>
 
-          <h1 className="text-3xl font-bold mb-sm">مرحباً بعودتك!</h1>
-          <p className="text-secondary mb-xl">سجّل دخولك للوصول إلى حسابك</p>
+          <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-gray-800">
+            مرحباً بعودتك!
+          </h1>
+          <p className="text-gray-600 mb-8">سجّل دخولك للوصول إلى حسابك</p>
 
           {/* Error Message */}
           {error && (
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-red-50 text-red-600 p-md rounded-xl mb-lg"
+              className="bg-red-50 text-red-600 p-4 rounded-xl mb-6 border border-red-200"
             >
               {error}
             </motion.div>
@@ -79,7 +81,7 @@ export default function Login() {
           {/* Google Login */}
           <Button
             variant="secondary"
-            className="w-full mb-lg"
+            className="w-full mb-6 cursor-pointer"
             onClick={handleGoogleLogin}
             loading={googleLoading}
             disabled={loading}
@@ -106,14 +108,14 @@ export default function Login() {
           </Button>
 
           {/* Divider */}
-          <div className="flex items-center gap-md mb-lg">
+          <div className="flex items-center gap-4 mb-6">
             <div className="flex-1 h-px bg-gray-200" />
-            <span className="text-sm text-muted">أو بالبريد الإلكتروني</span>
+            <span className="text-sm text-gray-500">أو بالبريد الإلكتروني</span>
             <div className="flex-1 h-px bg-gray-200" />
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} className="space-y-4">
             <Input
               label="البريد الإلكتروني"
               type="email"
@@ -139,20 +141,23 @@ export default function Login() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute left-4 top-10 text-muted hover:text-primary transition-colors"
+                className="absolute cursor-pointer left-4 top-12 text-gray-500 hover:text-teal-600 transition-colors"
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
 
-            <div className="flex items-center justify-between mb-lg">
+            <div className="flex items-center justify-between">
               <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" className="w-4 h-4 rounded" />
-                <span className="text-sm">تذكرني</span>
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500"
+                />
+                <span className="text-sm text-gray-700">تذكرني</span>
               </label>
               <Link
                 to="/forgot-password"
-                className="text-sm text-accent-green hover:underline"
+                className="text-sm text-teal-600 hover:text-teal-700 hover:underline"
               >
                 نسيت كلمة المرور؟
               </Link>
@@ -160,7 +165,7 @@ export default function Login() {
 
             <Button
               type="submit"
-              className="w-full"
+              className="w-full mt-6 cursor-pointer"
               loading={loading}
               disabled={googleLoading}
               icon={<ArrowLeft size={18} />}
@@ -170,12 +175,11 @@ export default function Login() {
             </Button>
           </form>
 
-          <p className="text-center text-secondary mt-xl">
+          <p className="text-center text-gray-600 mt-8">
             ليس لديك حساب؟{" "}
             <Link
               to="/register"
-              className="font-semibold hover:underline"
-              style={{ color: "#0d9488" }}
+              className="font-semibold text-teal-600 hover:text-teal-700 hover:underline"
             >
               أنشئ حساباً جديداً
             </Link>
@@ -183,15 +187,15 @@ export default function Login() {
         </motion.div>
       </div>
 
-      {/* Right Side - Decoration (hidden on mobile) */}
-      <div
-        className="auth-decoration flex-1 bg-gradient-to-br from-primary via-primary to-gray-900 items-center justify-center p-xl relative overflow-hidden"
-        style={{ display: "none" }}
-      >
+      {/* Right Side - Decoration (hidden on mobile, visible on lg screens) */}
+      <div className="hidden lg:flex flex-1 bg-gradient-to-br from-gray-900 via-gray-800 to-teal-900 items-center justify-center p-12 relative overflow-hidden">
         {/* Background Blobs */}
         <div className="absolute inset-0 pointer-events-none">
-          <div className="blob blob-green w-96 h-96 top-20 right-20 opacity-20" />
-          <div className="blob blob-purple w-80 h-80 bottom-40 left-20 opacity-20" />
+          <div className="absolute w-96 h-96 top-20 right-20 bg-teal-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse" />
+          <div
+            className="absolute w-80 h-80 bottom-40 left-20 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"
+            style={{ animationDelay: "1s" }}
+          />
         </div>
 
         <motion.div
@@ -200,11 +204,11 @@ export default function Login() {
           transition={{ delay: 0.2 }}
           className="relative z-10 text-center text-white"
         >
-          <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-accent-green to-accent-blue flex items-center justify-center mx-auto mb-lg">
+          <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-teal-500 to-blue-500 flex items-center justify-center mx-auto mb-8 shadow-2xl">
             <Sparkles size={48} />
           </div>
-          <h2 className="text-4xl font-black mb-md">القطار</h2>
-          <p className="text-xl max-w-md" style={{ color: "#e5e7eb" }}>
+          <h2 className="text-4xl font-black mb-4">القطار</h2>
+          <p className="text-xl max-w-md text-gray-300">
             حوّل أفكارك إلى محتوى بصري احترافي بقوة الذكاء الاصطناعي
           </p>
         </motion.div>

@@ -59,12 +59,12 @@ export default function Modal({
           >
             {/* Header */}
             {(title || showClose) && (
-              <div className="flex items-center justify-between p-lg border-b border-gray-100">
+              <div className="flex items-center justify-between p-6 border-b border-gray-100">
                 {title && <h3 className="text-xl font-bold mb-0">{title}</h3>}
                 {showClose && (
                   <button
                     onClick={onClose}
-                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                    className="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
                   >
                     <X size={20} />
                   </button>
@@ -73,7 +73,7 @@ export default function Modal({
             )}
 
             {/* Body */}
-            <div className="p-lg">{children}</div>
+            <div className="p-6">{children}</div>
           </motion.div>
         </div>
       )}

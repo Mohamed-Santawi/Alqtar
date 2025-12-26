@@ -7,29 +7,25 @@ export default function Loading({
 }) {
   if (fullScreen) {
     return (
-      <div className="loading-container">
-        <div className="flex flex-col items-center gap-lg">
-          <video autoPlay loop muted playsInline className="loading-video">
+      <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-gray-50 to-stone-100 z-50">
+        <div className="flex flex-col items-center gap-8">
+          <video autoPlay loop muted playsInline className="w-32 h-32">
             <source src={loadingVideo} type="video/mp4" />
           </video>
-          <p className="text-lg text-secondary animate-pulse">{text}</p>
+          <p className="text-lg text-gray-600 animate-pulse font-medium">
+            {text}
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col items-center justify-center py-xl gap-md">
-      <video
-        autoPlay
-        loop
-        muted
-        playsInline
-        style={{ width: 150, height: 150 }}
-      >
+    <div className="flex flex-col items-center justify-center py-12 gap-4">
+      <video autoPlay loop muted playsInline className="w-32 h-32">
         <source src={loadingVideo} type="video/mp4" />
       </video>
-      <p className="text-secondary">{text}</p>
+      <p className="text-gray-600">{text}</p>
     </div>
   );
 }

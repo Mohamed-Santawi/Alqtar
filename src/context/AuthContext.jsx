@@ -35,6 +35,13 @@ export function AuthProvider({ children }) {
 
   // Listen to auth state changes
   useEffect(() => {
+    // Diagnostic check for production
+    if (!import.meta.env.VITE_FIREBASE_API_KEY) {
+      console.warn(
+        "⚠️ Firebase API Key is missing. Check your environment variables!"
+      );
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
 

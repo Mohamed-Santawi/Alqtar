@@ -22,7 +22,7 @@ export function AccordionItem({
         boxShadow: isOpen
           ? "0 10px 40px rgba(168, 230, 207, 0.15)"
           : "0 2px 10px rgba(0, 0, 0, 0.03)",
-        borderColor: isOpen ? "#a8e6cf" : "#f3f4f6",
+        borderColor: isOpen ? "#57c99fff" : "#f3f4f6",
       }}
       transition={{ duration: 0.3 }}
       whileHover={{
@@ -32,7 +32,7 @@ export function AccordionItem({
     >
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center gap-4 p-lg hover:bg-gray-50/50 transition-all duration-300 text-right cursor-pointer group"
+        className="w-full flex items-center gap-4 p-6 hover:bg-gray-50/50 transition-all duration-300 text-right cursor-pointer group"
       >
         {/* Question Icon */}
         <motion.div
@@ -76,7 +76,7 @@ export function AccordionItem({
         >
           <ChevronDown
             size={22}
-            className={`transition-colors duration-300 ${
+            className={`transition-colors duration-300  ${
               isOpen ? "text-accent-green" : "text-gray-400"
             }`}
           />
@@ -95,11 +95,11 @@ export function AccordionItem({
               initial={{ y: -10 }}
               animate={{ y: 0 }}
               transition={{ duration: 0.3, delay: 0.1 }}
-              className="px-lg pb-lg pt-0"
+              className="px-6 pb-6 pt-0"
             >
               {/* Answer with styled container */}
               <div
-                className="bg-gradient-to-l from-gray-50 to-transparent rounded-xl p-md pr-0 text-secondary leading-relaxed border-r-4"
+                className="bg-gradient-to-l from-gray-50 to-transparent rounded-xl p-5 pr-4 text-gray-600 font-medium leading-relaxed border-r-4"
                 style={{ borderRightColor: "#a8e6cf" }}
               >
                 {children}

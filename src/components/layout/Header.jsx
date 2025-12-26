@@ -93,7 +93,7 @@ export default function Header() {
             </Link>
 
             {/* Desktop Navigation - Center */}
-            <div className="desktop-nav flex items-center gap-6">
+            <div className="hidden md:flex items-center gap-6">
               {navLinks.map((link) => {
                 const isActive = location.pathname === link.href;
                 return (
@@ -123,12 +123,12 @@ export default function Header() {
             </div>
 
             {/* Desktop Auth Buttons */}
-            <div className="desktop-nav flex items-center gap-3">
+            <div className="hidden  md:flex items-center gap-3">
               {user ? (
                 <div className="relative">
                   <button
                     onClick={() => setIsProfileOpen(!isProfileOpen)}
-                    className="flex items-center gap-2 py-2 px-3 rounded-xl hover:bg-gray-100 transition-colors"
+                    className="flex items-center cursor-pointer gap-2 py-2 px-3 rounded-xl bg-gray-500 hover:bg-gray-800 transition-colors border border-gray-200"
                   >
                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-accent-green to-accent-purple flex items-center justify-center">
                       <span className="text-white text-sm font-bold">
@@ -137,44 +137,51 @@ export default function Header() {
                           "م"}
                       </span>
                     </div>
-                    <ChevronDown size={14} className="text-gray-500" />
+                    <ChevronDown size={14} className="text-gray-600" />
                   </button>
 
                   <AnimatePresence>
                     {isProfileOpen && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 10 }}
-                        className="absolute left-0 top-full mt-2 w-52 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden"
-                      >
-                        <div className="p-3 border-b border-gray-100 bg-gray-50">
-                          <p className="font-semibold truncate text-sm">
-                            {user.displayName || "مستخدم"}
-                          </p>
-                          <p className="text-xs text-muted truncate">
-                            {user.email}
-                          </p>
-                        </div>
-                        <Link
-                          to="/dashboard"
-                          className="flex items-center gap-3 p-3 hover:bg-gray-50 transition-colors text-sm"
+                      <>
+                        {/* Invisible backdrop to close dropdown when clicking outside */}
+                        <div
+                          className="fixed inset-0 z-30"
                           onClick={() => setIsProfileOpen(false)}
+                        />
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 10 }}
+                          className="absolute left-0 top-full mt-2 w-52 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-40"
                         >
-                          <User size={16} className="text-gray-500" />
-                          <span>لوحة التحكم</span>
-                        </Link>
-                        <button
-                          onClick={() => {
-                            handleLogout();
-                            setIsProfileOpen(false);
-                          }}
-                          className="w-full flex items-center gap-3 p-3 hover:bg-red-50 transition-colors text-red-500 border-t border-gray-100 text-sm"
-                        >
-                          <LogOut size={16} />
-                          <span>تسجيل الخروج</span>
-                        </button>
-                      </motion.div>
+                          <div className="p-3 border-b border-gray-100 bg-gray-50">
+                            <p className="font-semibold truncate text-sm">
+                              {user.displayName || "مستخدم"}
+                            </p>
+                            <p className="text-xs text-muted truncate">
+                              {user.email}
+                            </p>
+                          </div>
+                          <Link
+                            to="/dashboard"
+                            className="flex items-center gap-3 p-3 hover:bg-gray-100 transition-colors text-sm font-medium text-gray-700 hover:text-gray-900"
+                            onClick={() => setIsProfileOpen(false)}
+                          >
+                            <User size={18} className="text-blue-600" />
+                            <span>لوحة التحكم</span>
+                          </Link>
+                          <button
+                            onClick={() => {
+                              handleLogout();
+                              setIsProfileOpen(false);
+                            }}
+                            className="w-full cursor-pointer flex items-center gap-3 p-3 hover:bg-red-50 transition-colors text-red-600 hover:text-red-700 border-t border-gray-100 text-sm font-medium"
+                          >
+                            <LogOut size={18} className="text-red-600" />
+                            <span>تسجيل الخروج</span>
+                          </button>
+                        </motion.div>
+                      </>
                     )}
                   </AnimatePresence>
                 </div>
@@ -201,9 +208,9 @@ export default function Header() {
               )}
             </div>
 
-            {/* Mobile Menu Button */}
+            {/* Mobile Menu Button - Only on Mobile */}
             <button
-              className="mobile-menu-btn p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               aria-label="القائمة"
             >
@@ -223,7 +230,7 @@ export default function Header() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsMenuOpen(false)}
-              className="mobile-menu fixed inset-0 bg-black/50 z-40"
+              className="md:hidden fixed inset-0 bg-black/50 z-40"
               style={{ top: "70px" }}
             />
 
@@ -232,7 +239,7 @@ export default function Header() {
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="mobile-menu fixed left-0 right-0 bg-white z-50 border-b border-gray-200 shadow-xl"
+              className="md:hidden fixed left-0 right-0 bg-white z-50 border-b border-gray-200 shadow-xl"
               style={{
                 top: "70px",
                 maxHeight: "calc(100vh - 70px)",
