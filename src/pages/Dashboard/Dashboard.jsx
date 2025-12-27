@@ -304,9 +304,19 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen flex" style={{ background: "#f8fafc" }}>
-      {/* Sidebar - Always Visible */}
+      {/* Mobile Menu Overlay */}
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Sidebar - Responsive */}
       <aside
-        className="flex flex-col transition-all duration-300 fixed right-0 top-0 bottom-0 z-40"
+        className={`flex flex-col transition-all duration-300 fixed right-0 top-0 bottom-0 z-50 lg:z-40 ${
+          mobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        }`}
         style={{
           width: sidebarOpen ? "280px" : "80px",
           background: "linear-gradient(180deg, #ffffff 0%, #fafafa 100%)",
@@ -631,23 +641,39 @@ export default function Dashboard() {
         </button>
       </aside>
 
+      {/* Mobile Menu Button */}
+      <button
+        onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+        className="lg:hidden fixed top-4 right-4 z-50 w-12 h-12 rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 text-white shadow-lg flex items-center justify-center"
+      >
+        {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+      </button>
+
       {/* Main Content */}
       <main
-        className="flex-1 min-h-screen overflow-auto transition-all duration-300"
+        className="flex-1 min-h-screen overflow-auto transition-all duration-300 w-full"
         style={{
-          marginRight: sidebarOpen ? "300px" : "100px",
-          padding: "40px 50px",
+          marginRight: "0",
+          padding: "20px 16px",
           background: "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)",
         }}
       >
+        <style>{`
+          @media (min-width: 1024px) {
+            main {
+              margin-right: ${sidebarOpen ? "300px" : "100px"} !important;
+              padding: 40px 50px !important;
+            }
+          }
+        `}</style>
         {/* Welcome Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-10"
+          className="mb-6 lg:mb-10"
         >
-          <div className="flex items-center gap-4 mb-3">
-            <h1 className="text-4xl font-black" style={{ color: "#1e293b" }}>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 mb-3">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black" style={{ color: "#1e293b" }}>
               مرحباً، {user?.displayName?.split(" ")[0] || "مستخدم"} 👋
             </h1>
             {isAdmin && (
@@ -665,7 +691,7 @@ export default function Dashboard() {
               </span>
             )}
           </div>
-          <p style={{ color: "#64748b", fontSize: "18px" }}>
+          <p style={{ color: "#64748b" }} className="text-sm sm:text-base lg:text-lg">
             {isAdmin
               ? "مرحباً بك في لوحة تحكم المسؤول"
               : "ماذا تريد أن تنشئ اليوم؟"}
@@ -683,9 +709,9 @@ export default function Dashboard() {
             الإجراءات السريعة
           </h2>
           <div
-            className="grid gap-6"
+            className="grid gap-4 sm:gap-6"
             style={{
-              gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
             }}
           >
             {quickActions.map((action, index) => (
@@ -748,7 +774,7 @@ export default function Dashboard() {
             <h2 className="text-xl font-bold mb-6" style={{ color: "#1e293b" }}>
               نظرة عامة على الإحصائيات
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
               {/* Users Stats */}
               <div
                 className="p-6 rounded-2xl"

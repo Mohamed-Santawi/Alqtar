@@ -182,8 +182,18 @@ export async function generateResearchPaper(
   let userPrompt = `موضوع: "${topic}"\n`;
   if (researcherName) userPrompt += `باحث: ${researcherName}\n`;
   if (supervisorName) userPrompt += `مشرف: ${supervisorName}\n`;
-  userPrompt += `أقسام: ${sectionsList}\n`;
-  if (userMessage) userPrompt += `ملاحظات: ${userMessage}\n`;
+
+  // تعليمات واضحة للأقسام المحددة فقط
+  if (sections.length > 0) {
+    userPrompt += `\n⚠️ مهم جداً: اكتب فقط الأقسام التالية ولا تكتب أي أقسام أخرى:\n${sections.join("\n")}\n\n`;
+    userPrompt += `ممنوع كتابة أي أقسام غير المذكورة أعلاه. اكتب فقط الأقسام المحددة.\n`;
+    userPrompt += `⚠️ مهم جداً: لا تكرر أي قسم - كل قسم يجب أن يظهر مرة واحدة فقط.\n`;
+    userPrompt += `⚠️ مهم جداً: لا تكتب "فهرس المحتوى" كقسم في المحتوى.\n`;
+  } else {
+    userPrompt += `أقسام: ${sectionsList}\n`;
+  }
+
+  if (userMessage) userPrompt += `\nملاحظات إضافية: ${userMessage}\n`;
 
   const messages = [
     {
@@ -197,7 +207,11 @@ export async function generateResearchPaper(
 - لا تكتب أي ملاحظات تمهيدية أو تنبيهات
 - ابدأ مباشرة بعنوان البحث ثم المحتوى
 - استخدم تنسيق نصي بسيط بالعربية فقط
-- لا تذكر أي شيء عن الخطوط أو الألوان أو التنسيق`,
+- لا تذكر أي شيء عن الخطوط أو الألوان أو التنسيق
+- ⚠️ مهم جداً: إذا تم تحديد أقسام محددة فقط، اكتب فقط هذه الأقسام ولا تضيف أي أقسام أخرى غير مذكورة
+- التزم تماماً بالأقسام المحددة في التعليمات ولا تخرج عنها
+- ⚠️ مهم جداً: لا تكرر أي قسم - كل قسم يجب أن يظهر مرة واحدة فقط
+- ⚠️ مهم جداً: لا تكتب "فهرس المحتوى" كقسم في المحتوى - الفهرس سيتم إضافته تلقائياً`,
     },
     {
       role: "user",
