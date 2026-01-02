@@ -315,10 +315,11 @@ export default function Dashboard() {
       {/* Sidebar - Responsive */}
       <aside
         className={`flex flex-col transition-all duration-300 fixed right-0 top-0 bottom-0 z-50 lg:z-40 ${
-          mobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+          mobileMenuOpen ? "translate-x-0" : "translate-x-full lg:translate-x-0"
         }`}
         style={{
-          width: sidebarOpen ? "280px" : "80px",
+          width: sidebarOpen ? "min(320px, 85vw)" : "80px",
+          maxWidth: "320px",
           background: "linear-gradient(180deg, #ffffff 0%, #fafafa 100%)",
           borderLeft: "1px solid #e5e7eb",
           boxShadow: "-6px 0 30px rgba(0,0,0,0.06)",
@@ -334,6 +335,17 @@ export default function Dashboard() {
             gap: "12px",
           }}
         >
+          {/* Hamburger icon in sidebar */}
+          <button
+            onClick={() => setMobileMenuOpen(false)}
+            className="lg:hidden w-10 h-10 rounded-lg text-white shadow-md flex items-center justify-center transition-all duration-300 hover:scale-105 shrink-0"
+            style={{
+              background: "linear-gradient(135deg, #10b981 0%, #3b82f6 100%)",
+            }}
+          >
+            <X size={20} />
+          </button>
+
           <div
             className="rounded-full flex items-center justify-center shrink-0"
             style={{
@@ -620,10 +632,10 @@ export default function Dashboard() {
           </button>
         </div>
 
-        {/* Toggle Button */}
+        {/* Toggle Button - Hidden on mobile */}
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="absolute top-6 -left-3 w-7 h-7 rounded-full flex items-center justify-center transition-all duration-300"
+          className="hidden lg:flex absolute top-6 -left-3 w-7 h-7 rounded-full items-center justify-center transition-all duration-300"
           style={{
             background: "linear-gradient(135deg, #10b981 0%, #3b82f6 100%)",
             boxShadow: "0 2px 8px rgba(16, 185, 129, 0.3)",
@@ -641,27 +653,29 @@ export default function Dashboard() {
         </button>
       </aside>
 
-      {/* Mobile Menu Button */}
-      <button
-        onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-        className="lg:hidden fixed top-4 right-4 z-50 w-12 h-12 rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 text-white shadow-lg flex items-center justify-center"
-      >
-        {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-      </button>
-
       {/* Main Content */}
       <main
         className="flex-1 min-h-screen overflow-auto transition-all duration-300 w-full"
         style={{
           marginRight: "0",
-          padding: "20px 16px",
+          padding: "16px",
           background: "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)",
         }}
       >
         <style>{`
+          @media (min-width: 640px) {
+            main {
+              padding: 24px 32px !important;
+            }
+          }
           @media (min-width: 1024px) {
             main {
-              margin-right: ${sidebarOpen ? "300px" : "100px"} !important;
+              margin-right: ${sidebarOpen ? "320px" : "80px"} !important;
+              padding: 32px 40px !important;
+            }
+          }
+          @media (min-width: 1280px) {
+            main {
               padding: 40px 50px !important;
             }
           }
@@ -672,10 +686,27 @@ export default function Dashboard() {
           animate={{ opacity: 1, y: 0 }}
           className="mb-6 lg:mb-10"
         >
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 mb-3">
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black" style={{ color: "#1e293b" }}>
-              مرحباً، {user?.displayName?.split(" ")[0] || "مستخدم"} 👋
-            </h1>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-3">
+            <div className="flex items-center gap-3">
+              {/* Hamburger icon in main content */}
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="lg:hidden w-10 h-10 rounded-lg text-white shadow-md flex items-center justify-center transition-all duration-300 hover:scale-105 shrink-0"
+                style={{
+                  background:
+                    "linear-gradient(135deg, #10b981 0%, #3b82f6 100%)",
+                }}
+              >
+                <Menu size={20} />
+              </button>
+
+              <h1
+                className="text-2xl sm:text-3xl lg:text-4xl font-black"
+                style={{ color: "#1e293b" }}
+              >
+                مرحباً، {user?.displayName?.split(" ")[0] || "مستخدم"} 👋
+              </h1>
+            </div>
             {isAdmin && (
               <span
                 className="px-4 py-1.5 text-sm font-bold rounded-full flex items-center gap-2"
@@ -691,7 +722,10 @@ export default function Dashboard() {
               </span>
             )}
           </div>
-          <p style={{ color: "#64748b" }} className="text-sm sm:text-base lg:text-lg">
+          <p
+            style={{ color: "#64748b" }}
+            className="text-sm sm:text-base lg:text-lg"
+          >
             {isAdmin
               ? "مرحباً بك في لوحة تحكم المسؤول"
               : "ماذا تريد أن تنشئ اليوم؟"}
@@ -709,9 +743,9 @@ export default function Dashboard() {
             الإجراءات السريعة
           </h2>
           <div
-            className="grid gap-4 sm:gap-6"
+            className="grid gap-4 sm:gap-5 md:gap-6"
             style={{
-              gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
             }}
           >
             {quickActions.map((action, index) => (

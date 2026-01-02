@@ -29,6 +29,8 @@ import { SketchPicker } from "react-color";
 import { useAuth } from "../../context/AuthContext";
 import { db } from "../../config/firebase";
 import { doc, setDoc, onSnapshot } from "firebase/firestore";
+import ResearchSidebar from "../../components/ResearchSidebar";
+import ResearchActionNotice from "../../components/ResearchActionNotice";
 
 export default function ResearchNew() {
   const navigate = useNavigate();
@@ -84,6 +86,31 @@ export default function ResearchNew() {
     "standard:conclusion",
     "standard:references",
   ]);
+
+  // Page count for research length
+  const [pageCount, setPageCount] = useState(10);
+
+  // Track initial state to detect changes
+  const [initialSections, setInitialSections] = useState([]);
+  const [initialNames, setInitialNames] = useState({
+    researcher: "",
+    supervisor: "",
+  });
+  const [actionNoticeDismissed, setActionNoticeDismissed] = useState(false);
+
+  // User balance in SAR
+  const [userBalance, setUserBalance] = useState(0);
+
+  // Auto-generate images for research
+  const [autoGenerateImages, setAutoGenerateImages] = useState(false);
+
+  // Collapsible sections state for sidebar accordion
+  const [expandedSections, setExpandedSections] = useState({
+    structure: true, // Research structure section - open by default
+    customization: false,
+    references: false,
+    export: false,
+  });
 
   const sectionLabels = {
     introduction: "المقدمة",
@@ -540,19 +567,36 @@ export default function ResearchNew() {
     setUploadedImages((prev) => prev.filter((img) => img.id !== id));
   };
 
-  const handleAddCustomSection = async () => {
-    if (newSectionInput.trim()) {
-      const newSection = newSectionInput.trim();
+  const handleAddCustomSection = async (sectionName) => {
+    console.log("🟢 ResearchNew: handleAddCustomSection called");
+    console.log("🟢 Received parameter sectionName:", sectionName);
+    console.log("🟢 Current customSections:", customSections);
+    console.log("🟢 Current unifiedSectionOrder:", unifiedSectionOrder);
+
+    if (sectionName && sectionName.trim()) {
+      const newSection = sectionName.trim();
       const updatedSections = [...customSections, newSection];
+
+      console.log("🟢 New section to add:", newSection);
+      console.log("🟢 Updated sections array:", updatedSections);
+
       setCustomSections(updatedSections);
 
       // Automatically select the new section
-      setSelectedCustomSections((prev) => ({
-        ...prev,
-        [newSection]: true,
-      }));
+      setSelectedCustomSections((prev) => {
+        const updated = { ...prev, [newSection]: true };
+        console.log("🟢 Updated selectedCustomSections:", updated);
+        return updated;
+      });
 
-      setNewSectionInput("");
+      // Add to unifiedSectionOrder so it appears in the list
+      setUnifiedSectionOrder((prev) => {
+        const updated = [...prev, `custom:${newSection}`];
+        console.log("🟢 Updated unifiedSectionOrder:", updated);
+        return updated;
+      });
+
+      console.log("✅ Custom section added successfully");
 
       // Save to Firestore
       try {
@@ -563,11 +607,20 @@ export default function ResearchNew() {
             { customSections: updatedSections },
             { merge: true }
           );
+          console.log("✅ Saved to Firestore");
         }
       } catch (error) {
-        console.error("Error saving custom section:", error);
+        console.error("❌ Error saving custom section:", error);
       }
+    } else {
+      console.log("❌ sectionName is empty or invalid:", sectionName);
     }
+  };
+
+  // دالة لإزالة قسم قياسي من القائمة
+  const handleRemoveStandardSection = (sectionKey) => {
+    const unifiedKey = `standard:${sectionKey}`;
+    setUnifiedSectionOrder((prev) => prev.filter((key) => key !== unifiedKey));
   };
 
   const handleRemoveCustomSection = async (index) => {
@@ -581,6 +634,10 @@ export default function ResearchNew() {
       delete newState[sectionToRemove];
       return newState;
     });
+
+    // Remove from unifiedSectionOrder
+    const unifiedKey = `custom:${sectionToRemove}`;
+    setUnifiedSectionOrder((prev) => prev.filter((key) => key !== unifiedKey));
 
     // Update Firestore
     try {
@@ -613,6 +670,266 @@ export default function ResearchNew() {
 
   const handleRemoveReference = (id) => {
     setReferences(references.filter((ref) => ref.id !== id));
+  };
+
+  // Detect changes from initial state
+  const detectChanges = () => {
+    if (!researchContent)
+      return { hasNewSections: false, hasNameChanges: false, newSections: [] };
+
+    // Get current sections
+    const currentSections = unifiedSectionOrder.filter((key) => {
+      if (key.startsWith("standard:")) {
+        const sectionKey = key.replace("standard:", "");
+        return selectedSections[sectionKey];
+      } else if (key.startsWith("custom:")) {
+        const section = key.replace("custom:", "");
+        return selectedCustomSections[section];
+      }
+      return false;
+    });
+
+    // Find new sections
+    const newSections = currentSections.filter(
+      (section) => !initialSections.includes(section)
+    );
+
+    const hasNewSections = newSections.length > 0;
+
+    // Check name changes
+    const hasNameChanges =
+      (researcherName !== initialNames.researcher && researcherName.trim()) ||
+      (supervisorName !== initialNames.supervisor && supervisorName.trim());
+
+    // Map section keys to readable names
+    const newSectionsList = newSections.map((key) => {
+      if (key.startsWith("standard:")) {
+        const sectionKey = key.replace("standard:", "");
+        return sectionLabels[sectionKey] || sectionKey;
+      } else if (key.startsWith("custom:")) {
+        return key.replace("custom:", "");
+      }
+      return key;
+    });
+
+    return { hasNewSections, hasNameChanges, newSections: newSectionsList };
+  };
+
+  // Handle adding new sections to existing research
+  const handleAddSectionsToResearch = async () => {
+    const { newSections } = detectChanges();
+
+    if (newSections.length === 0) {
+      alert("لا توجد أقسام جديدة لإضافتها");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Use chatCompletion directly for better control
+      const { chatCompletion } = await import("../../services/ai");
+
+      const messages = [
+        {
+          role: "system",
+          content: `أنت باحث أكاديمي متخصص. مهمتك هي إكمال بحث موجود بإضافة أقسام جديدة فقط.
+
+قواعد مهمة:
+- احتفظ بكل المحتوى الموجود كما هو تماماً
+- أضف الأقسام الجديدة فقط
+- استخدم نفس الأسلوب والتنسيق
+- اكتب محتوى علمي مفصل`,
+        },
+        {
+          role: "user",
+          content: `البحث الحالي:
+${researchContent}
+
+==================
+
+الأقسام الجديدة المطلوب إضافتها:
+${newSections.map((s, i) => `${i + 1}. ${s}`).join("\n")}
+
+قم بكتابة البحث كاملاً مع الأقسام الجديدة المضافة في الأماكن المناسبة.`,
+        },
+      ];
+
+      const response = await chatCompletion(messages, {
+        model: "openai/gpt-5-nano-2025-08-07",
+        maxTokens: 8000,
+        temperature: 0.7,
+      });
+
+      const newContent = response.choices?.[0]?.message?.content || "";
+
+      if (newContent) {
+        setResearchContent(newContent);
+        // Update initial sections to include new ones
+        setInitialSections(
+          unifiedSectionOrder.filter((key) => {
+            if (key.startsWith("standard:")) {
+              return selectedSections[key.replace("standard:", "")];
+            } else if (key.startsWith("custom:")) {
+              return selectedCustomSections[key.replace("custom:", "")];
+            }
+            return false;
+          })
+        );
+        setActionNoticeDismissed(false);
+        alert("✅ تم إضافة الأقسام الجديدة بنجاح!");
+      } else {
+        alert("لم يتم استلام محتوى من الذكاء الاصطناعي");
+      }
+    } catch (error) {
+      console.error("Error adding sections:", error);
+      alert(`حدث خطأ: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle updating names without regenerating
+  const handleUpdateNamesOnly = () => {
+    if (!researchContent) {
+      alert("لا يوجد بحث لتحديث الأسماء فيه");
+      return;
+    }
+
+    const updatedContent = addNamesToContent(researchContent);
+    setResearchContent(updatedContent);
+    setInitialNames({ researcher: researcherName, supervisor: supervisorName });
+    setActionNoticeDismissed(false);
+    alert("✅ تم تحديث الأسماء بنجاح!");
+  };
+
+  // Load user balance from Firestore
+  React.useEffect(() => {
+    if (!user) return;
+
+    const loadBalance = async () => {
+      try {
+        const userDocRef = doc(db, "users", user.uid);
+        const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            setUserBalance(data.balance || 0);
+          } else {
+            // Initialize balance if not exists
+            setDoc(userDocRef, { balance: 200 }, { merge: true });
+            setUserBalance(200);
+          }
+        });
+        return unsubscribe;
+      } catch (error) {
+        console.error("Error loading balance:", error);
+      }
+    };
+
+    loadBalance();
+  }, [user]);
+
+  // Calculate and deduct research cost
+  const deductResearchCost = async (tokenUsage) => {
+    if (!user || !tokenUsage) return;
+
+    try {
+      // GPT-5 Nano REAL pricing (AIML API)
+      const INPUT_PRICE_PER_1M = 0.0525; // $0.0525 per 1M input tokens
+      const OUTPUT_PRICE_PER_1M = 0.42; // $0.42 per 1M output tokens
+      const USD_TO_SAR = 3.75; // Exchange rate
+      const MARKUP = 2.0; // 2x markup (100% profit)
+
+      const inputTokens = tokenUsage.prompt_tokens || 0;
+      const outputTokens = tokenUsage.completion_tokens || 0;
+      const totalTokens = tokenUsage.total_tokens || 0;
+
+      // Calculate cost in USD
+      const inputCostUSD = (inputTokens / 1_000_000) * INPUT_PRICE_PER_1M;
+      const outputCostUSD = (outputTokens / 1_000_000) * OUTPUT_PRICE_PER_1M;
+      const totalCostUSD = inputCostUSD + outputCostUSD;
+
+      // Convert to SAR and add markup
+      const apiCostSAR = totalCostUSD * USD_TO_SAR;
+      const cost = apiCostSAR * MARKUP;
+
+      console.log(`💰 Research cost breakdown:`, {
+        inputTokens,
+        outputTokens,
+        totalTokens,
+        inputCostUSD: inputCostUSD.toFixed(6),
+        outputCostUSD: outputCostUSD.toFixed(6),
+        totalCostUSD: totalCostUSD.toFixed(6),
+        apiCostSAR: apiCostSAR.toFixed(6),
+        finalCostWithMarkup: cost.toFixed(6),
+        markup: `${MARKUP}x`,
+      });
+
+      // Deduct from balance
+      const newBalance = Math.max(0, userBalance - cost);
+
+      const userDocRef = doc(db, "users", user.uid);
+      await setDoc(
+        userDocRef,
+        {
+          balance: newBalance,
+          lastTransaction: {
+            type: "research_generation",
+            cost: cost,
+            costUSD: totalCostUSD,
+            tokens: {
+              input: inputTokens,
+              output: outputTokens,
+              total: totalTokens,
+            },
+            pricing: {
+              inputRate: INPUT_PRICE_PER_1M,
+              outputRate: OUTPUT_PRICE_PER_1M,
+              markup: MARKUP,
+            },
+            timestamp: new Date().toISOString(),
+          },
+        },
+        { merge: true }
+      );
+
+      setUserBalance(newBalance);
+      console.log(
+        `✅ Balance updated: ${newBalance.toFixed(2)} SAR (cost: ${cost.toFixed(
+          6
+        )} SAR)`
+      );
+    } catch (error) {
+      console.error("Error deducting cost:", error);
+    }
+  };
+
+  // Handle multiple image uploads
+  const handleAddImages = async (files) => {
+    try {
+      const newImages = await Promise.all(
+        files.map(async (file) => {
+          return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              resolve({
+                id: Date.now() + Math.random(), // Unique ID
+                file,
+                name: file.name,
+                preview: reader.result,
+                base64: reader.result,
+              });
+            };
+            reader.readAsDataURL(file);
+          });
+        })
+      );
+
+      setUploadedImages([...uploadedImages, ...newImages]);
+      console.log(`✅ Added ${newImages.length} images for AI analysis`);
+    } catch (error) {
+      console.error("Error uploading images:", error);
+      alert("حدث خطأ أثناء رفع الصور");
+    }
   };
 
   // دالة لإضافة أسماء الطالب والمشرف في بداية البحث
@@ -727,8 +1044,12 @@ export default function ResearchNew() {
   };
 
   const handleGenerateResearch = async () => {
-    if (!researchTopic.trim()) {
-      alert("يرجى إدخال موضوع البحث");
+    // Allow generation if either topic OR images are provided
+    if (
+      !researchTopic.trim() &&
+      (!uploadedImages || uploadedImages.length === 0)
+    ) {
+      alert("يرجى إدخال موضوع البحث أو رفع صور للتحليل");
       return;
     }
 
@@ -786,6 +1107,14 @@ export default function ResearchNew() {
         additionalInstructions += `⚠️ مهم جداً: لا تكتب "فهرس المحتوى" كقسم في المحتوى.\n`;
       }
 
+      // Add page count instruction
+      if (pageCount && pageCount > 0) {
+        additionalInstructions += `\n\n📄 عدد الصفحات المطلوب: ${pageCount} صفحة\n`;
+        additionalInstructions += `⚠️ مهم جداً: يجب أن يكون البحث بطول ${pageCount} صفحة تقريباً.\n`;
+        additionalInstructions += `اكتب محتوى كافي ومفصل لملء ${pageCount} صفحة.\n`;
+        additionalInstructions += `وزع المحتوى بشكل متوازن على جميع الأقسام.\n`;
+      }
+
       if (references.length > 0) {
         additionalInstructions += `\n\nالمراجع المرفقة:\n${references
           .map((ref, index) => `${index + 1}. ${ref.url}`)
@@ -796,20 +1125,48 @@ export default function ResearchNew() {
         additionalInstructions += `\nرابط مرجعي إضافي: ${urlInput.trim()}`;
       }
 
+      // Add image analysis instructions
+      if (uploadedImages && uploadedImages.length > 0) {
+        additionalInstructions += `\n\n📸 تحليل الصور:\n`;
+        additionalInstructions += `تم رفع ${uploadedImages.length} صورة للتحليل.\n`;
+        additionalInstructions += `قم بتحليل الصور المرفقة واستخدامها كمرجع أساسي للبحث.\n`;
+        additionalInstructions += `اكتب البحث بناءً على محتوى الصور والمعلومات المستخلصة منها.\n`;
+      }
+
       console.log("🚀 Starting research generation with:", {
         topic: researchTopic,
         sections: allSections,
         sectionsCount: allSections.length,
+        pageCount: pageCount,
       });
 
-      const response = await generateResearchPaper(
-        researchTopic,
-        researcherName,
-        supervisorName,
-        allSections,
-        chatHistory.map((msg) => `${msg.role}: ${msg.content}`).join("\n") +
+      let response;
+
+      // Use vision model if images are uploaded
+      if (uploadedImages && uploadedImages.length > 0) {
+        const { analyzeImagesForResearch } = await import("../../services/ai");
+
+        console.log(
+          `📸 Analyzing ${uploadedImages.length} images for research`
+        );
+
+        response = await analyzeImagesForResearch(
+          uploadedImages,
+          researchTopic,
+          allSections,
           additionalInstructions
-      );
+        );
+      } else {
+        // Regular text-based research
+        response = await generateResearchPaper(
+          researchTopic,
+          researcherName,
+          supervisorName,
+          allSections,
+          chatHistory.map((msg) => `${msg.role}: ${msg.content}`).join("\n") +
+            additionalInstructions
+        );
+      }
 
       console.log("📦 API Response:", response);
 
@@ -831,13 +1188,82 @@ export default function ResearchNew() {
 
       console.log("✅ Research content set successfully");
 
+      // Generate illustrative images if enabled
+      if (autoGenerateImages) {
+        console.log("🎨 Generating illustrative images...");
+        try {
+          const { generateIllustrativeImages } = await import(
+            "../../services/ai"
+          );
+          const generatedImages = await generateIllustrativeImages(content, 3);
+
+          console.log(`✅ Generated ${generatedImages.length} images`);
+
+          // Insert images into research content
+          let contentWithImages = contentWithNames;
+          generatedImages.forEach((img, index) => {
+            if (img.url) {
+              const imageMarkdown = `\n\n![${img.topic}](${img.url})\n*الشكل ${
+                index + 1
+              }: ${img.topic}*\n\n`;
+              // Insert after each major section
+              const sections = contentWithImages.split("\n\n");
+              if (sections.length > index + 2) {
+                sections.splice((index + 1) * 3, 0, imageMarkdown);
+                contentWithImages = sections.join("\n\n");
+              }
+            }
+          });
+
+          setResearchContent(contentWithImages);
+          console.log("✅ Images embedded in research");
+        } catch (imageError) {
+          console.error(
+            "⚠️ Error generating images (research was still created):",
+            imageError
+          );
+          // Don't fail the whole research if images fail
+        }
+      }
+
       // Capture token usage if available
       if (response.usage) {
         setTokenUsage(response.usage);
+        // Deduct cost from user balance
+        await deductResearchCost(response.usage);
       }
+
+      // Save initial state for change detection
+      setInitialSections(
+        unifiedSectionOrder.filter((key) => {
+          if (key.startsWith("standard:")) {
+            return selectedSections[key.replace("standard:", "")];
+          } else if (key.startsWith("custom:")) {
+            return selectedCustomSections[key.replace("custom:", "")];
+          }
+          return false;
+        })
+      );
+      setInitialNames({
+        researcher: researcherName,
+        supervisor: supervisorName,
+      });
+      setActionNoticeDismissed(false);
     } catch (error) {
       console.error("❌ Error generating research:", error);
-      alert(`حدث خطأ: ${error.message}`);
+
+      // Provide better error messages
+      let errorMessage = error.message;
+      if (uploadedImages && uploadedImages.length > 0) {
+        if (
+          error.message.includes("Failed to fetch") ||
+          error.message.includes("ERR_SOCKET")
+        ) {
+          errorMessage = `فشل الاتصال بخدمة تحليل الصور.\n\nيرجى التحقق من:\n- الاتصال بالإنترنت\n- صلاحية مفتاح API\n\nأو حاول إنشاء البحث بدون صور.`;
+        }
+      }
+
+      alert(`حدث خطأ: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -1237,13 +1663,30 @@ ${
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-3">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between w-full">
             <button
               onClick={() => navigate("/dashboard")}
               className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-3 cursor-pointer rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white font-semibold text-sm sm:text-base shadow-md hover:shadow-lg transition-all duration-200"
             >
               <ArrowLeft size={18} className="sm:w-5 sm:h-5" />
               <span className="hidden sm:inline">العودة</span>
+            </button>
+
+            {/* Balance Display - Clickable */}
+            <button
+              onClick={() => navigate("/transaction-history")}
+              className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-emerald-50 to-teal-50 hover:from-emerald-100 hover:to-teal-100 rounded-xl border-2 border-emerald-200 hover:border-emerald-300 transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md"
+              title="عرض تاريخ المعاملات"
+            >
+              <div className="flex items-center gap-1.5">
+                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                <span className="text-xs sm:text-sm font-semibold text-gray-700">
+                  الرصيد:
+                </span>
+              </div>
+              <span className="text-sm sm:text-lg font-bold text-emerald-600">
+                {userBalance.toFixed(2)} ر.س
+              </span>
             </button>
 
             {/* Mobile Sidebar Toggle */}
@@ -1277,847 +1720,58 @@ ${
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
-          {/* Sidebar - Research Structure */}
-          <div
-            className={`lg:col-span-1 fade-on-scroll fixed lg:relative inset-y-0 right-0 z-50 lg:z-auto transform transition-transform duration-300 ${
-              mobileMenuOpen
-                ? "translate-x-0"
-                : "translate-x-full lg:translate-x-0"
-            }`}
-          >
-            <div className="bg-gradient-to-br from-amber-600 to-amber-700 rounded-2xl sm:rounded-3xl px-3 sm:px-4 lg:px-6 py-3 sm:py-4 lg:py-6 shadow-lg h-full overflow-y-auto max-h-screen lg:max-h-none w-[85vw] sm:w-[70vw] lg:w-full max-w-[320px] sm:max-w-none">
-              {/* Close Button for Mobile */}
-              <div className="flex items-center justify-between mb-4 lg:hidden">
-                <h2
-                  className="text-white font-bold text-xl sm:text-2xl flex items-center gap-2"
-                  dir="rtl"
-                >
-                  <FileText size={24} className="sm:w-7 sm:h-7" />
-                  هيكل البحث
-                </h2>
-                <button
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="p-2 rounded-lg bg-white/20 hover:bg-white/30 text-white"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-
-              {/* Desktop Title */}
-              <h2
-                className="text-white font-bold text-xl sm:text-2xl mb-4 sm:mb-6 hidden lg:flex items-center gap-3"
-                dir="rtl"
-              >
-                <FileText size={28} />
-                هيكل البحث
-              </h2>
-              <h2
-                className="text-white font-bold text-2xl mb-6 flex items-center gap-3"
-                dir="rtl"
-              >
-                <FileText size={28} />
-                هيكل البحث
-              </h2>
-
-              <div className="space-y-2 sm:space-y-3">
-                {/* Display all sections in unified order */}
-                {unifiedSectionOrder
-                  .filter((unifiedKey) => {
-                    if (unifiedKey.startsWith("standard:")) {
-                      const key = unifiedKey.replace("standard:", "");
-                      return !hiddenSections.includes(key);
-                    }
-                    return true;
-                  })
-                  .map((unifiedKey) => {
-                    const filteredOrder = unifiedSectionOrder.filter((k) => {
-                      if (k.startsWith("standard:")) {
-                        const key = k.replace("standard:", "");
-                        return !hiddenSections.includes(key);
-                      }
-                      return true;
-                    });
-                    const currentIndex = filteredOrder.indexOf(unifiedKey);
-
-                    if (unifiedKey.startsWith("standard:")) {
-                      const key = unifiedKey.replace("standard:", "");
-                      const label = sectionLabels[key];
-                      if (!label) return null;
-                      return (
-                        <div
-                          key={unifiedKey}
-                          className="w-full flex items-center gap-2"
-                          dir="rtl"
-                        >
-                          <div className="flex flex-col gap-1">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                moveSectionUp(key, false);
-                              }}
-                              disabled={currentIndex === 0}
-                              className="p-1 rounded cursor-pointer text-white/70 hover:text-white hover:bg-white/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-                              title="تحريك لأعلى"
-                            >
-                              <ChevronUp size={16} />
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                moveSectionDown(key, false);
-                              }}
-                              disabled={
-                                currentIndex === filteredOrder.length - 1
-                              }
-                              className="p-1 rounded cursor-pointer text-white/70 hover:text-white hover:bg-white/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-                              title="تحريك لأسفل"
-                            >
-                              <ChevronDown size={16} />
-                            </button>
-                          </div>
-                          <button
-                            onClick={() => handleSectionToggle(key)}
-                            className="flex-1 cursor-pointer flex items-center gap-4 px-4 py-3 rounded-xl bg-white/10 hover:bg-white/25 backdrop-blur-sm transition-all duration-200 group"
-                            dir="rtl"
-                          >
-                            {selectedSections[key] ? (
-                              <CheckSquare
-                                className="text-white group-hover:scale-110 transition-transform"
-                                size={24}
-                              />
-                            ) : (
-                              <Square
-                                className="text-white/70 group-hover:scale-110 transition-transform"
-                                size={24}
-                              />
-                            )}
-                            <span
-                              className={`flex-1 font-semibold text-base ${
-                                selectedSections[key]
-                                  ? "text-white"
-                                  : "text-white/80"
-                              }`}
-                            >
-                              {label}
-                            </span>
-                            <div
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setHiddenSections((prev) => [...prev, key]);
-                              }}
-                              className="transition-all cursor-pointer text-white/70 hover:scale-110 p-1"
-                            >
-                              <X size={18} className="text-current" />
-                            </div>
-                          </button>
-                        </div>
-                      );
-                    } else if (unifiedKey.startsWith("custom:")) {
-                      const section = unifiedKey.replace("custom:", "");
-                      const sectionIndex = customSections.findIndex(
-                        (s) => s === section
-                      );
-                      if (sectionIndex === -1) return null;
-                      return (
-                        <div
-                          key={unifiedKey}
-                          className="w-full flex items-center gap-2"
-                          dir="rtl"
-                        >
-                          <div className="flex flex-col gap-1">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                moveSectionUp(section, true);
-                              }}
-                              disabled={currentIndex === 0}
-                              className="p-1 rounded cursor-pointer text-white/70 hover:text-white hover:bg-white/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-                              title="تحريك لأعلى"
-                            >
-                              <ChevronUp size={16} />
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                moveSectionDown(section, true);
-                              }}
-                              disabled={
-                                currentIndex === filteredOrder.length - 1
-                              }
-                              className="p-1 rounded cursor-pointer text-white/70 hover:text-white hover:bg-white/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-                              title="تحريك لأسفل"
-                            >
-                              <ChevronDown size={16} />
-                            </button>
-                          </div>
-                          <button
-                            onClick={() => handleToggleCustomSection(section)}
-                            className="flex-1 cursor-pointer flex items-center gap-4 px-4 py-3 rounded-xl bg-white/10 hover:bg-white/25 backdrop-blur-sm transition-all duration-200 group"
-                            dir="rtl"
-                          >
-                            {selectedCustomSections[section] ? (
-                              <CheckSquare
-                                className="text-white group-hover:scale-110 transition-transform"
-                                size={24}
-                              />
-                            ) : (
-                              <Square
-                                className="text-white/70 group-hover:scale-110 transition-transform"
-                                size={24}
-                              />
-                            )}
-                            <span
-                              className={`flex-1 font-semibold text-base ${
-                                selectedCustomSections[section]
-                                  ? "text-white"
-                                  : "text-white/80"
-                              }`}
-                            >
-                              {section}
-                            </span>
-                            <div
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleRemoveCustomSection(sectionIndex);
-                              }}
-                              className="transition-all cursor-pointer text-white/70 hover:scale-110 p-1"
-                            >
-                              <X size={18} className="text-current" />
-                            </div>
-                          </button>
-                        </div>
-                      );
-                    }
-                    return null;
-                  })}
-              </div>
-
-              {/* Custom Section Input */}
-              <div className="mt-6 pt-6 border-t border-white/20">
-                <label
-                  className="block text-white font-semibold text-base mb-3"
-                  dir="rtl"
-                >
-                  اضافة قسم لهيكل البحث
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newSectionInput}
-                    onChange={(e) => setNewSectionInput(e.target.value)}
-                    onKeyPress={(e) =>
-                      e.key === "Enter" && handleAddCustomSection()
-                    }
-                    placeholder="اسم القسم الجديد..."
-                    className="flex-1 px-4 py-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/50 focus:bg-white/15 focus:border-white/40 outline-none"
-                    dir="rtl"
-                  />
-                  <button
-                    onClick={handleAddCustomSection}
-                    className="px-6 py-3 rounded-lg bg-amber-600 hover:bg-amber-700 transition-colors cursor-pointer flex items-center gap-2"
-                  >
-                    <PlusCircle className="text-white" size={18} />
-                    <span className="text-white font-semibold">اضافة</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Templates */}
-              <div className="mt-6 pt-6 border-t border-white/20">
-                <label
-                  className="block text-white font-semibold text-base mb-4"
-                  dir="rtl"
-                >
-                  القوالب الجاهزة
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { id: "academic", label: "أكاديمي", icon: "📚" },
-                    { id: "modern", label: "حديث", icon: "✨" },
-                    { id: "classic", label: "تقليدي", icon: "📄" },
-                    { id: "thesis", label: "رسالة", icon: "🎓" },
-                    { id: "newspaper", label: "صحفي", icon: "📰" },
-                  ].map((template) => (
-                    <button
-                      key={template.id}
-                      onClick={() => setSelectedTemplate(template.id)}
-                      className={`p-4 rounded-xl transition-all cursor-pointer ${
-                        selectedTemplate === template.id
-                          ? "bg-white/25 border-2 border-white"
-                          : "bg-white/10 border-2 border-white/20 hover:bg-white/15"
-                      }`}
-                      dir="rtl"
-                    >
-                      <div className="text-2xl mb-2">{template.icon}</div>
-                      <div className="text-white font-semibold text-sm">
-                        {template.label}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Font Family Selector */}
-              <div className="mt-6 pt-6 border-t border-white/20">
-                <label
-                  className="block text-white font-semibold text-base mb-3"
-                  dir="rtl"
-                >
-                  نوع الخط
-                </label>
-                <select
-                  value={fontFamily}
-                  onChange={(e) => setFontFamily(e.target.value)}
-                  className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/20 text-white focus:bg-white/15 focus:border-white/40 outline-none cursor-pointer"
-                  dir="rtl"
-                  style={{ fontFamily }}
-                >
-                  {fontFamilies.map((font) => (
-                    <option
-                      key={font.value}
-                      value={font.value}
-                      style={{
-                        fontFamily: font.value,
-                        background: "#d97706",
-                        color: "white",
-                      }}
-                    >
-                      {font.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Color Pickers */}
-              <div className="mt-6 pt-6 border-t border-white/20 space-y-4">
-                <div>
-                  <label
-                    className="block text-white font-semibold text-base mb-3"
-                    dir="rtl"
-                  >
-                    لون العناوين
-                  </label>
-                  <input
-                    type="text"
-                    value={titleColor}
-                    onChange={(e) => setTitleColor(e.target.value)}
-                    placeholder="#000000"
-                    className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/20 text-white focus:bg-white/15 focus:border-white/40 outline-none font-mono text-sm"
-                    dir="ltr"
-                  />
-                  {/* Preset Colors */}
-                  <div className="mt-3 grid grid-cols-6 gap-2">
-                    {[
-                      "#000000",
-                      "#ff0000",
-                      "#00ff00",
-                      "#0000ff",
-                      "#ffff00",
-                      "#ff00ff",
-                      "#00ffff",
-                      "#ff6600",
-                      "#6600ff",
-                      "#00ff99",
-                      "#ff0099",
-                      "#999999",
-                    ].map((color) => (
-                      <button
-                        key={color}
-                        onClick={() => setTitleColor(color)}
-                        className="w-full h-10 rounded-lg border-2 border-white/30 hover:border-white hover:scale-105 cursor-pointer transition-all"
-                        style={{ backgroundColor: color }}
-                        title={color}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label
-                    className="block text-white font-semibold text-base mb-3"
-                    dir="rtl"
-                  >
-                    لون المحتوى
-                  </label>
-                  <input
-                    type="text"
-                    value={contentColor}
-                    onChange={(e) => setContentColor(e.target.value)}
-                    placeholder="#333333"
-                    className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/20 text-white focus:bg-white/15 focus:border-white/40 outline-none font-mono"
-                    dir="ltr"
-                  />
-                  {/* Preset Colors */}
-                  <div className="mt-3 grid grid-cols-6 gap-2">
-                    {[
-                      "#000000",
-                      "#333333",
-                      "#666666",
-                      "#999999",
-                      "#1a1a1a",
-                      "#2d2d2d",
-                      "#404040",
-                      "#737373",
-                      "#0d47a1",
-                      "#b71c1c",
-                      "#1b5e20",
-                      "#f57c00",
-                    ].map((color) => (
-                      <button
-                        key={color}
-                        onClick={() => setContentColor(color)}
-                        className="w-full h-10 rounded-lg border-2 border-white/30 hover:border-white cursor-pointer transition-all"
-                        style={{ backgroundColor: color }}
-                        title={color}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Decoration and Frames Section */}
-              <div className="mt-6 pt-6 border-t border-white/20">
-                <label
-                  className="block text-white font-semibold text-base mb-4"
-                  dir="rtl"
-                >
-                  <Palette size={18} className="inline ml-2" />
-                  الزخارف والإطارات
-                </label>
-
-                {/* Decoration Style Selection */}
-                <div className="mb-4">
-                  <label
-                    className="block text-white text-sm mb-3 font-medium"
-                    dir="rtl"
-                  >
-                    نوع الزخرفة
-                  </label>
-
-                  {/* Word-like Professional Styles */}
-                  <div>
-                    <label
-                      className="block text-white/80 text-xs mb-2"
-                      dir="rtl"
-                    >
-                      قوالب Word الاحترافية
-                    </label>
-                    <div className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto">
-                      {Object.entries(decorationStyles)
-                        .filter(([key]) => key.startsWith("word"))
-                        .map(([key, style]) => (
-                          <button
-                            key={key}
-                            onClick={() => setSelectedDecoration(key)}
-                            className={`p-2.5 rounded-lg border-2 transition-all cursor-pointer text-center ${
-                              selectedDecoration === key
-                                ? "border-amber-400 bg-amber-500/30 shadow-lg"
-                                : "border-white/20 bg-white/5 hover:bg-white/10"
-                            }`}
-                            dir="rtl"
-                            title={style.name}
-                          >
-                            <div className="text-lg mb-1">{style.icon}</div>
-                            <div
-                              className={`text-xs font-semibold truncate ${
-                                selectedDecoration === key
-                                  ? "text-white"
-                                  : "text-white/70"
-                              }`}
-                            >
-                              {style.name}
-                            </div>
-                          </button>
-                        ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Spacing Controls */}
-                {selectedDecoration !== "none" && (
-                  <div className="space-y-4 mt-4 pt-4 border-t border-white/10">
-                    <label
-                      className="block text-white text-sm mb-3 font-medium"
-                      dir="rtl"
-                    >
-                      ضبط المسافات
-                    </label>
-
-                    {/* Padding Control */}
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <label className="text-white text-xs" dir="rtl">
-                          المسافة الداخلية
-                        </label>
-                        <span className="text-white/80 text-xs font-mono">
-                          {decorationSpacing.padding}px
-                        </span>
-                      </div>
-                      <input
-                        type="range"
-                        min="0"
-                        max="60"
-                        value={decorationSpacing.padding}
-                        onChange={(e) =>
-                          setDecorationSpacing((prev) => ({
-                            ...prev,
-                            padding: parseInt(e.target.value),
-                          }))
-                        }
-                        className="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer accent-amber-500"
-                      />
-                    </div>
-
-                    {/* Margin Control */}
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <label className="text-white text-xs" dir="rtl">
-                          المسافة الخارجية
-                        </label>
-                        <span className="text-white/80 text-xs font-mono">
-                          {decorationSpacing.margin}px
-                        </span>
-                      </div>
-                      <input
-                        type="range"
-                        min="0"
-                        max="50"
-                        value={decorationSpacing.margin}
-                        onChange={(e) =>
-                          setDecorationSpacing((prev) => ({
-                            ...prev,
-                            margin: parseInt(e.target.value),
-                          }))
-                        }
-                        className="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer accent-amber-500"
-                      />
-                    </div>
-
-                    {/* Border Width Control */}
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <label className="text-white text-xs" dir="rtl">
-                          سماكة الإطار
-                        </label>
-                        <span className="text-white/80 text-xs font-mono">
-                          {decorationSpacing.borderWidth}px
-                        </span>
-                      </div>
-                      <input
-                        type="range"
-                        min="1"
-                        max="10"
-                        value={decorationSpacing.borderWidth}
-                        onChange={(e) =>
-                          setDecorationSpacing((prev) => ({
-                            ...prev,
-                            borderWidth: parseInt(e.target.value),
-                          }))
-                        }
-                        className="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer accent-amber-500"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Additional Tools Section */}
-              <div className="mt-6 pt-6 border-t border-white/20">
-                <label
-                  className="block text-white font-semibold text-base mb-4"
-                  dir="rtl"
-                >
-                  <Sparkles size={18} className="inline ml-2" />
-                  أدوات إضافية
-                </label>
-
-                {/* File Upload */}
-                <div className="space-y-3">
-                  <label className="block text-white text-sm mb-2" dir="rtl">
-                    <Upload size={16} className="inline ml-2" />
-                    رفع ملف مرجعي
-                  </label>
-                  <input
-                    type="file"
-                    accept=".pdf,.doc,.docx,.txt"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                    id="fileUpload"
-                  />
-                  <label
-                    htmlFor="fileUpload"
-                    className="block w-full px-4 py-3 rounded-lg bg-white/10 border-2 border-dashed border-white/30 hover:bg-white/15 hover:border-white/50 transition-all cursor-pointer text-center"
-                  >
-                    <p className="text-white text-sm">
-                      {uploadedFile
-                        ? uploadedFile.name
-                        : "اختر ملف (PDF, Word, TXT)"}
-                    </p>
-                  </label>
-                  {uploadedFile && (
-                    <button
-                      onClick={() => setUploadedFile(null)}
-                      className="w-full px-3 py-2 cursor-pointer rounded-lg bg-red-500/20 hover:bg-red-500/30 text-white text-sm transition-colors"
-                    >
-                      إزالة الملف
-                    </button>
-                  )}
-                </div>
-
-                {/* Image Upload */}
-                <div className="space-y-3 mt-4">
-                  <label className="block text-white text-sm mb-2" dir="rtl">
-                    <Upload size={16} className="inline ml-2" />
-                    رفع صورة
-                  </label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={handleImageUpload}
-                    className="hidden"
-                    id="imageUpload"
-                  />
-                  <label
-                    htmlFor="imageUpload"
-                    className="block w-full px-4 py-3 rounded-lg bg-white/10 border-2 border-dashed border-white/30 hover:bg-white/15 hover:border-white/50 transition-all cursor-pointer text-center"
-                  >
-                    <p className="text-white text-sm">
-                      {uploadedImages.length > 0
-                        ? `${uploadedImages.length} صورة مرفوعة`
-                        : "اختر صورة أو أكثر"}
-                    </p>
-                  </label>
-                  {uploadedImages.length > 0 && (
-                    <div className="space-y-2 max-h-40 overflow-y-auto">
-                      {uploadedImages.map((img) => (
-                        <div
-                          key={img.id}
-                          className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 border border-white/20"
-                        >
-                          <img
-                            src={img.url}
-                            alt={img.name}
-                            className="w-10 h-10 object-cover rounded"
-                          />
-                          <span className="flex-1 text-white text-xs truncate">
-                            {img.name}
-                          </span>
-                          <button
-                            onClick={() => handleRemoveImage(img.id)}
-                            className="p-1 cursor-pointer hover:bg-red-500/20 rounded transition-colors"
-                          >
-                            <X size={14} className="text-red-300" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Add Link Section */}
-              <div className="mt-6 pt-6 border-t border-white/20">
-                <label
-                  className="block text-white font-semibold text-base mb-3"
-                  dir="rtl"
-                >
-                  <LinkIcon size={18} className="inline ml-2" />
-                  إضافة رابط
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="url"
-                    value={linkInput}
-                    onChange={(e) => setLinkInput(e.target.value)}
-                    onKeyPress={(e) => e.key === "Enter" && handleAddLink()}
-                    placeholder="أدخل رابط مرجعي..."
-                    className="flex-1 px-4 py-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/50 focus:bg-white/15 focus:border-white/40 outline-none text-sm"
-                    dir="rtl"
-                  />
-                  <button
-                    onClick={handleAddLink}
-                    className="px-4 py-3 cursor-pointer rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-semibold transition-all shadow-lg hover:shadow-xl"
-                  >
-                    <PlusCircle size={20} />
-                  </button>
-                </div>
-              </div>
-
-              {/* Reference Style Selector */}
-              {references.length > 0 && (
-                <div className="mt-6 pt-6 border-t border-white/20">
-                  <label
-                    className="block text-white font-semibold text-base mb-3"
-                    dir="rtl"
-                  >
-                    <BookOpen size={18} className="inline ml-2" />
-                    نظام المراجع
-                  </label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {[
-                      { id: "apa", label: "APA", icon: "📚" },
-                      { id: "ieee", label: "IEEE", icon: "🔬" },
-                      { id: "mla", label: "MLA", icon: "📖" },
-                    ].map((style) => (
-                      <button
-                        key={style.id}
-                        onClick={() => setReferenceStyle(style.id)}
-                        className={`p-3 rounded-lg border-2 transition-all cursor-pointer text-center ${
-                          referenceStyle === style.id
-                            ? "border-amber-400 bg-amber-500/30"
-                            : "border-white/20 bg-white/5 hover:bg-white/10"
-                        }`}
-                      >
-                        <div className="text-lg mb-1">{style.icon}</div>
-                        <div
-                          className={`text-xs font-semibold ${
-                            referenceStyle === style.id
-                              ? "text-white"
-                              : "text-white/70"
-                          }`}
-                        >
-                          {style.label}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Manage References Section */}
-              {references.length > 0 && (
-                <div className="mt-6 pt-6 border-t border-white/20">
-                  <label
-                    className="block text-white font-semibold text-base mb-3"
-                    dir="rtl"
-                  >
-                    <BookOpen size={18} className="inline ml-2" />
-                    إدارة المراجع ({references.length})
-                  </label>
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {references.map((ref) => (
-                      <div
-                        key={ref.id}
-                        className="group flex items-center gap-3 px-4 py-3 rounded-lg bg-white/10 border border-white/20 hover:bg-white/15 transition-all"
-                      >
-                        <LinkIcon
-                          size={16}
-                          className="text-amber-400 flex-shrink-0"
-                        />
-                        <a
-                          href={ref.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex-1 text-white text-sm truncate hover:text-amber-300 transition-colors"
-                          dir="ltr"
-                        >
-                          {ref.url}
-                        </a>
-                        <button
-                          onClick={() => handleRemoveReference(ref.id)}
-                          className="opacity-0 cursor-pointer group-hover:opacity-100 p-1 hover:bg-red-500/20 rounded transition-all"
-                        >
-                          <X size={16} className="text-red-400" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {/* Export Format Section */}
-              <div className="mt-6 pt-6 border-t border-white/20">
-                <label
-                  className="block text-white font-semibold text-base mb-4"
-                  dir="rtl"
-                >
-                  <FileDown size={18} className="inline ml-2" />
-                  تنسيق الحفظ
-                </label>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {/* PDF */}
-                  <button
-                    onClick={() => setExportFormat("pdf")}
-                    className={`p-4 cursor-pointer rounded-lg border-2 transition-all text-center ${
-                      exportFormat === "pdf"
-                        ? "border-amber-500 bg-amber-500/20"
-                        : "border-white/20 bg-white/5 hover:bg-white/10"
-                    }`}
-                  >
-                    <FileText
-                      size={24}
-                      className={`mx-auto mb-2 ${
-                        exportFormat === "pdf"
-                          ? "text-amber-400"
-                          : "text-white/70"
-                      }`}
-                    />
-                    <p className="text-white text-xs font-semibold">PDF</p>
-                  </button>
-
-                  {/* HTML */}
-                  <button
-                    onClick={() => setExportFormat("html")}
-                    className={`p-4 cursor-pointer rounded-lg border-2 transition-all text-center ${
-                      exportFormat === "html"
-                        ? "border-amber-500 bg-amber-500/20"
-                        : "border-white/20 bg-white/5 hover:bg-white/10"
-                    }`}
-                  >
-                    <FileText
-                      size={24}
-                      className={`mx-auto mb-2 ${
-                        exportFormat === "html"
-                          ? "text-amber-400"
-                          : "text-white/70"
-                      }`}
-                    />
-                    <p className="text-white text-xs font-semibold">HTML</p>
-                  </button>
-
-                  {/* Word */}
-                  <button
-                    onClick={() => setExportFormat("docx")}
-                    className={`p-4 cursor-pointer rounded-lg border-2 transition-all text-center ${
-                      exportFormat === "docx"
-                        ? "border-amber-500 bg-amber-500/20"
-                        : "border-white/20 bg-white/5 hover:bg-white/10"
-                    }`}
-                  >
-                    <FileText
-                      size={24}
-                      className={`mx-auto mb-2 ${
-                        exportFormat === "docx"
-                          ? "text-amber-400"
-                          : "text-white/70"
-                      }`}
-                    />
-                    <p className="text-white text-xs font-semibold">Word</p>
-                  </button>
-
-                  {/* PPTX */}
-                  <button
-                    onClick={() => setExportFormat("pptx")}
-                    className={`p-4 cursor-pointer rounded-lg border-2 transition-all text-center ${
-                      exportFormat === "pptx"
-                        ? "border-amber-500 bg-amber-500/20"
-                        : "border-white/20 bg-white/5 hover:bg-white/10"
-                    }`}
-                  >
-                    <FileText
-                      size={24}
-                      className={`mx-auto mb-2 ${
-                        exportFormat === "pptx"
-                          ? "text-amber-400"
-                          : "text-white/70"
-                      }`}
-                    />
-                    <p className="text-white text-xs font-semibold">PPTX</p>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+          {/* Sidebar - Research Configuration */}
+          <ResearchSidebar
+            // Section management
+            selectedSections={selectedSections}
+            onSectionToggle={handleSectionToggle}
+            customSections={customSections}
+            selectedCustomSections={selectedCustomSections}
+            onCustomSectionToggle={handleToggleCustomSection}
+            onAddCustomSection={handleAddCustomSection}
+            onRemoveCustomSection={handleRemoveCustomSection}
+            unifiedSectionOrder={unifiedSectionOrder}
+            onMoveSectionUp={moveSectionUp}
+            onMoveSectionDown={moveSectionDown}
+            onRemoveStandardSection={handleRemoveStandardSection}
+            // Page count
+            pageCount={pageCount}
+            onPageCountChange={setPageCount}
+            // Auto-generate images
+            autoGenerateImages={autoGenerateImages}
+            onAutoGenerateImagesChange={setAutoGenerateImages}
+            // Customization
+            fontFamily={fontFamily}
+            onFontChange={setFontFamily}
+            titleColor={titleColor}
+            onTitleColorChange={setTitleColor}
+            contentColor={contentColor}
+            onContentColorChange={setContentColor}
+            selectedDecoration={selectedDecoration}
+            onDecorationChange={setSelectedDecoration}
+            // Export
+            exportFormat={exportFormat}
+            onExportFormatChange={setExportFormat}
+            // References
+            references={references}
+            onAddReference={(url) =>
+              setReferences([...references, { id: Date.now(), url }])
+            }
+            onRemoveReference={handleRemoveReference}
+            // File upload
+            uploadedFile={uploadedFile}
+            onFileUpload={handleFileUpload}
+            onRemoveFile={() => setUploadedFile(null)}
+            // Image upload for AI analysis
+            uploadedImages={uploadedImages}
+            onAddImages={handleAddImages}
+            onRemoveImage={handleRemoveImage}
+            // Styles and config
+            decorationStyles={decorationStyles}
+            // Mobile
+            mobileMenuOpen={mobileMenuOpen}
+            onCloseMobile={() => setMobileMenuOpen(false)}
+          />
 
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-4 sm:space-y-6">
@@ -2339,7 +1993,11 @@ ${
                   {/* Create New Research Button */}
                   <button
                     onClick={handleGenerateResearch}
-                    disabled={loading || !researchTopic.trim()}
+                    disabled={
+                      loading ||
+                      (!researchTopic.trim() &&
+                        (!uploadedImages || uploadedImages.length === 0))
+                    }
                     className="w-full px-4 sm:px-6 lg:px-8 py-3 sm:py-4 lg:py-5 cursor-pointer rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-base sm:text-lg lg:text-xl shadow-md hover:shadow-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2 sm:gap-4"
                   >
                     {loading ? (
@@ -2524,32 +2182,51 @@ ${
 
             {/* Research Output */}
             {researchContent && (
-              <div className="fade-on-scroll bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 shadow-md border border-gray-100">
-                <div className="flex items-center gap-4 mb-6 pb-4 border-b border-gray-200">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-600 to-teal-600 flex items-center justify-center shadow-lg">
-                    <FileText className="text-white" size={24} />
-                  </div>
-                  <h2 className="text-2xl font-bold text-gray-800 flex-1">
-                    محتوى البحث
-                  </h2>
-                  <button
-                    onClick={async (event) => {
-                      const button = event.currentTarget;
-                      const originalText = button.innerHTML;
+              <>
+                {/* Action Notice for Changes */}
+                {!actionNoticeDismissed &&
+                  (() => {
+                    const changes = detectChanges();
+                    return (
+                      <ResearchActionNotice
+                        hasNewSections={changes.hasNewSections}
+                        newSectionsList={changes.newSections}
+                        hasNameChanges={changes.hasNameChanges}
+                        researcherName={researcherName}
+                        supervisorName={supervisorName}
+                        onAddSectionsToResearch={handleAddSectionsToResearch}
+                        onUpdateNames={handleUpdateNamesOnly}
+                        onDismiss={() => setActionNoticeDismissed(true)}
+                      />
+                    );
+                  })()}
 
-                      try {
-                        // تعطيل الزر مؤقتاً
-                        button.disabled = true;
-                        button.innerHTML =
-                          '<Loader2 className="animate-spin" size={20} /> جاري التحضير...';
+                <div className="fade-on-scroll bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 shadow-md border border-gray-100">
+                  <div className="flex items-center gap-4 mb-6 pb-4 border-b border-gray-200">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-600 to-teal-600 flex items-center justify-center shadow-lg">
+                      <FileText className="text-white" size={24} />
+                    </div>
+                    <h2 className="text-2xl font-bold text-gray-800 flex-1">
+                      محتوى البحث
+                    </h2>
+                    <button
+                      onClick={async (event) => {
+                        const button = event.currentTarget;
+                        const originalText = button.innerHTML;
 
-                        // استخدام setTimeout لإعطاء المتصفح فرصة لتحديث الواجهة
-                        await new Promise((resolve) =>
-                          setTimeout(resolve, 100)
-                        );
+                        try {
+                          // تعطيل الزر مؤقتاً
+                          button.disabled = true;
+                          button.innerHTML =
+                            '<Loader2 className="animate-spin" size={20} /> جاري التحضير...';
 
-                        // Create formatted document with styling
-                        const styledContent = `
+                          // استخدام setTimeout لإعطاء المتصفح فرصة لتحديث الواجهة
+                          await new Promise((resolve) =>
+                            setTimeout(resolve, 100)
+                          );
+
+                          // Create formatted document with styling
+                          const styledContent = `
                         <!DOCTYPE html>
                         <html dir="rtl" lang="ar">
                         <head>
@@ -2945,392 +2622,398 @@ ${
                         </html>
                       `;
 
-                        // Handle different export formats
-                        if (exportFormat === "pdf") {
-                          // Create a new window with the content and trigger print
-                          const printWindow = window.open("", "_blank");
-                          if (printWindow) {
-                            printWindow.document.write(styledContent);
-                            printWindow.document.close();
-                            printWindow.focus();
-                            setTimeout(() => {
-                              printWindow.print();
-                            }, 500);
+                          // Handle different export formats
+                          if (exportFormat === "pdf") {
+                            // Create a new window with the content and trigger print
+                            const printWindow = window.open("", "_blank");
+                            if (printWindow) {
+                              printWindow.document.write(styledContent);
+                              printWindow.document.close();
+                              printWindow.focus();
+                              setTimeout(() => {
+                                printWindow.print();
+                              }, 500);
+                            }
+                          } else if (exportFormat === "html") {
+                            // Download as HTML
+                            const blob = new Blob([styledContent], {
+                              type: "text/html",
+                            });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement("a");
+                            a.href = url;
+                            a.download = `${researchTopic || "بحث علمي"}.html`;
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            setTimeout(() => URL.revokeObjectURL(url), 100);
+                          } else if (exportFormat === "docx") {
+                            alert(
+                              "تحويل Word قريباً! حالياً يمكنك تحميل HTML ثم فتحه في Word."
+                            );
+                          } else if (exportFormat === "pptx") {
+                            alert(
+                              "تحويل PowerPoint قريباً! حالياً يمكنك تحميل HTML أو PDF."
+                            );
                           }
-                        } else if (exportFormat === "html") {
-                          // Download as HTML
-                          const blob = new Blob([styledContent], {
-                            type: "text/html",
-                          });
-                          const url = URL.createObjectURL(blob);
-                          const a = document.createElement("a");
-                          a.href = url;
-                          a.download = `${researchTopic || "بحث علمي"}.html`;
-                          document.body.appendChild(a);
-                          a.click();
-                          document.body.removeChild(a);
-                          setTimeout(() => URL.revokeObjectURL(url), 100);
-                        } else if (exportFormat === "docx") {
-                          alert(
-                            "تحويل Word قريباً! حالياً يمكنك تحميل HTML ثم فتحه في Word."
-                          );
-                        } else if (exportFormat === "pptx") {
-                          alert(
-                            "تحويل PowerPoint قريباً! حالياً يمكنك تحميل HTML أو PDF."
+                        } catch (error) {
+                          console.error("Error exporting:", error);
+                          alert(`حدث خطأ أثناء التصدير: ${error.message}`);
+                        } finally {
+                          // إعادة تفعيل الزر
+                          button.disabled = false;
+                          button.innerHTML = originalText;
+                        }
+                      }}
+                      className="px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold shadow-md hover:shadow-lg transition-all cursor-pointer flex items-center gap-2"
+                    >
+                      <Save size={20} />
+                      <span>تحميل البحث</span>
+                    </button>
+                  </div>
+
+                  {/* Styled Research Content */}
+                  <div
+                    className="prose prose-lg max-w-none"
+                    dir="rtl"
+                    style={{
+                      fontFamily: fontFamily,
+                      color: contentColor,
+                    }}
+                  >
+                    <div
+                      className="p-6 rounded-xl"
+                      style={{
+                        background:
+                          selectedDecoration !== "none"
+                            ? decorationStyles[selectedDecoration].background ||
+                              currentTemplateStyle.background
+                            : currentTemplateStyle.background,
+                        borderWidth:
+                          selectedDecoration !== "none"
+                            ? `${decorationSpacing.borderWidth}px`
+                            : decorationStyles[selectedDecoration]
+                                ?.borderWidth || "2px",
+                        borderStyle:
+                          selectedDecoration !== "none"
+                            ? decorationStyles[selectedDecoration]
+                                .borderStyle || "solid"
+                            : "solid",
+                        borderColor:
+                          selectedDecoration !== "none"
+                            ? decorationStyles[selectedDecoration]
+                                .borderColor || currentTemplateStyle.borderColor
+                            : currentTemplateStyle.borderColor,
+                        boxShadow:
+                          selectedDecoration !== "none"
+                            ? decorationStyles[selectedDecoration].boxShadow ||
+                              "none"
+                            : "none",
+                        padding: `${decorationSpacing.padding}px`,
+                        margin: `${decorationSpacing.margin}px`,
+                      }}
+                    >
+                      {/* Display Table of Contents */}
+                      {(() => {
+                        const sections = extractSections(researchContent);
+                        if (sections.length > 0) {
+                          return (
+                            <div
+                              id="table-of-contents"
+                              className="mb-8 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200 shadow-sm"
+                            >
+                              <h2
+                                className="text-2xl font-bold mb-4 pb-3 border-b-2 border-blue-300"
+                                style={{ color: titleColor }}
+                              >
+                                📑 فهرس المحتوى
+                              </h2>
+                              <ul
+                                className="space-y-3 list-none p-0 m-0"
+                                dir="rtl"
+                              >
+                                {sections.map((section) => (
+                                  <li
+                                    key={section.id}
+                                    className="flex items-start"
+                                  >
+                                    <span className="text-blue-600 font-bold ml-2 mt-1">
+                                      •
+                                    </span>
+                                    <button
+                                      onClick={() =>
+                                        scrollToSection(section.id)
+                                      }
+                                      className="flex-1 text-right hover:text-blue-600 transition-all duration-200 font-medium text-base py-2 px-3 rounded-lg hover:bg-blue-50 cursor-pointer border-b-2 border-transparent hover:border-blue-400"
+                                      style={{
+                                        color: contentColor,
+                                        textDecoration: "underline",
+                                        textDecorationColor:
+                                          "rgba(59, 130, 246, 0.3)",
+                                        textUnderlineOffset: "4px",
+                                      }}
+                                    >
+                                      {section.title}
+                                    </button>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
                           );
                         }
-                      } catch (error) {
-                        console.error("Error exporting:", error);
-                        alert(`حدث خطأ أثناء التصدير: ${error.message}`);
-                      } finally {
-                        // إعادة تفعيل الزر
-                        button.disabled = false;
-                        button.innerHTML = originalText;
-                      }
-                    }}
-                    className="px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold shadow-md hover:shadow-lg transition-all cursor-pointer flex items-center gap-2"
-                  >
-                    <Save size={20} />
-                    <span>تحميل البحث</span>
-                  </button>
-                </div>
+                        return null;
+                      })()}
 
-                {/* Styled Research Content */}
-                <div
-                  className="prose prose-lg max-w-none"
-                  dir="rtl"
-                  style={{
-                    fontFamily: fontFamily,
-                    color: contentColor,
-                  }}
-                >
-                  <div
-                    className="p-6 rounded-xl"
-                    style={{
-                      background:
-                        selectedDecoration !== "none"
-                          ? decorationStyles[selectedDecoration].background ||
-                            currentTemplateStyle.background
-                          : currentTemplateStyle.background,
-                      borderWidth:
-                        selectedDecoration !== "none"
-                          ? `${decorationSpacing.borderWidth}px`
-                          : decorationStyles[selectedDecoration]?.borderWidth ||
-                            "2px",
-                      borderStyle:
-                        selectedDecoration !== "none"
-                          ? decorationStyles[selectedDecoration].borderStyle ||
-                            "solid"
-                          : "solid",
-                      borderColor:
-                        selectedDecoration !== "none"
-                          ? decorationStyles[selectedDecoration].borderColor ||
-                            currentTemplateStyle.borderColor
-                          : currentTemplateStyle.borderColor,
-                      boxShadow:
-                        selectedDecoration !== "none"
-                          ? decorationStyles[selectedDecoration].boxShadow ||
-                            "none"
-                          : "none",
-                      padding: `${decorationSpacing.padding}px`,
-                      margin: `${decorationSpacing.margin}px`,
-                    }}
-                  >
-                    {/* Display Table of Contents */}
-                    {(() => {
-                      const sections = extractSections(researchContent);
-                      if (sections.length > 0) {
-                        return (
-                          <div
-                            id="table-of-contents"
-                            className="mb-8 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200 shadow-sm"
+                      {/* Display Uploaded Images */}
+                      {uploadedImages.length > 0 && (
+                        <div className="mb-6 space-y-4">
+                          <h3
+                            className="text-lg font-bold mb-3"
+                            style={{ color: titleColor }}
                           >
-                            <h2
-                              className="text-2xl font-bold mb-4 pb-3 border-b-2 border-blue-300"
-                              style={{ color: titleColor }}
-                            >
-                              📑 فهرس المحتوى
-                            </h2>
-                            <ul
-                              className="space-y-3 list-none p-0 m-0"
-                              dir="rtl"
-                            >
-                              {sections.map((section) => (
-                                <li
-                                  key={section.id}
-                                  className="flex items-start"
-                                >
-                                  <span className="text-blue-600 font-bold ml-2 mt-1">
-                                    •
-                                  </span>
-                                  <button
-                                    onClick={() => scrollToSection(section.id)}
-                                    className="flex-1 text-right hover:text-blue-600 transition-all duration-200 font-medium text-base py-2 px-3 rounded-lg hover:bg-blue-50 cursor-pointer border-b-2 border-transparent hover:border-blue-400"
-                                    style={{
-                                      color: contentColor,
-                                      textDecoration: "underline",
-                                      textDecorationColor:
-                                        "rgba(59, 130, 246, 0.3)",
-                                      textUnderlineOffset: "4px",
-                                    }}
-                                  >
-                                    {section.title}
-                                  </button>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        );
-                      }
-                      return null;
-                    })()}
-
-                    {/* Display Uploaded Images */}
-                    {uploadedImages.length > 0 && (
-                      <div className="mb-6 space-y-4">
-                        <h3
-                          className="text-lg font-bold mb-3"
-                          style={{ color: titleColor }}
-                        >
-                          الصور المرفوعة
-                        </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {uploadedImages.map((img) => (
-                            <div
-                              key={img.id}
-                              className="relative group rounded-lg overflow-hidden border-2 border-gray-200"
-                            >
-                              <img
-                                src={img.url}
-                                alt={img.name}
-                                className="w-full h-auto object-cover"
-                              />
-                              <div className="absolute top-2 left-2 bg-black/50 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                                {img.name}
+                            الصور المرفوعة
+                          </h3>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {uploadedImages.map((img) => (
+                              <div
+                                key={img.id}
+                                className="relative group rounded-lg overflow-hidden border-2 border-gray-200"
+                              >
+                                <img
+                                  src={img.url}
+                                  alt={img.name}
+                                  className="w-full h-auto object-cover"
+                                />
+                                <div className="absolute top-2 left-2 bg-black/50 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                                  {img.name}
+                                </div>
                               </div>
-                            </div>
-                          ))}
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
 
-                    {(() => {
-                      console.log(
-                        "🎨 Rendering research content. Length:",
-                        researchContent.length
-                      );
+                      {(() => {
+                        console.log(
+                          "🎨 Rendering research content. Length:",
+                          researchContent.length
+                        );
 
-                      // Create pattern for all section names (standard + custom)
-                      const allSectionNames = [
-                        ...Object.values(sectionLabels),
-                        ...customSections,
-                      ];
-                      const sectionPattern = new RegExp(
-                        `^(${allSectionNames.join("|")})`,
-                        "i"
-                      );
+                        // Create pattern for all section names (standard + custom)
+                        const allSectionNames = [
+                          ...Object.values(sectionLabels),
+                          ...customSections,
+                        ];
+                        const sectionPattern = new RegExp(
+                          `^(${allSectionNames.join("|")})`,
+                          "i"
+                        );
 
-                      const seenSections = new Set(); // لمنع تكرار الأقسام
+                        const seenSections = new Set(); // لمنع تكرار الأقسام
 
-                      return researchContent
-                        .split("\n")
-                        .map((line, index) => {
-                          const trimmed = line.trim();
-                          if (!trimmed) return <br key={index} />;
+                        return researchContent
+                          .split("\n")
+                          .map((line, index) => {
+                            const trimmed = line.trim();
+                            if (!trimmed) return <br key={index} />;
 
-                          // استبعاد الفهرس من المحتوى
-                          if (
-                            trimmed.includes("فهرس المحتوى") ||
-                            trimmed.match(/^فهرس/i)
-                          ) {
-                            return null;
-                          }
+                            // استبعاد الفهرس من المحتوى
+                            if (
+                              trimmed.includes("فهرس المحتوى") ||
+                              trimmed.match(/^فهرس/i)
+                            ) {
+                              return null;
+                            }
 
-                          // Detect if line is a title/header
-                          const normalizedTitle = trimmed
-                            .replace(/[:\-–—]/g, "")
-                            .trim()
-                            .toLowerCase();
+                            // Detect if line is a title/header
+                            const normalizedTitle = trimmed
+                              .replace(/[:\-–—]/g, "")
+                              .trim()
+                              .toLowerCase();
 
-                          // التحقق من الأقسام المخصصة أيضاً
-                          const matchesCustomSection = customSections.some(
-                            (customSection) => {
-                              const normalizedCustom = customSection
-                                .replace(/[:\-–—]/g, "")
-                                .trim()
-                                .toLowerCase();
+                            // التحقق من الأقسام المخصصة أيضاً
+                            const matchesCustomSection = customSections.some(
+                              (customSection) => {
+                                const normalizedCustom = customSection
+                                  .replace(/[:\-–—]/g, "")
+                                  .trim()
+                                  .toLowerCase();
+                                return (
+                                  normalizedTitle === normalizedCustom ||
+                                  normalizedTitle.includes(normalizedCustom) ||
+                                  normalizedCustom.includes(normalizedTitle)
+                                );
+                              }
+                            );
+
+                            const isTitle =
+                              trimmed.length < 100 &&
+                              (trimmed.includes(":") ||
+                                sectionPattern.test(trimmed) ||
+                                matchesCustomSection ||
+                                trimmed === researchTopic ||
+                                (index < 3 && trimmed.length < 50));
+
+                            if (isTitle) {
+                              // منع تكرار الأقسام
+                              if (seenSections.has(normalizedTitle)) {
+                                return null; // لا نعرض القسم المكرر
+                              }
+                              seenSections.add(normalizedTitle);
+
+                              // إنشاء معرف فريد للقسم
+                              const sectionId = `section-${index}-${trimmed
+                                .replace(/\s+/g, "-")
+                                .replace(/[^\w-]/g, "")}`;
+
                               return (
-                                normalizedTitle === normalizedCustom ||
-                                normalizedTitle.includes(normalizedCustom) ||
-                                normalizedCustom.includes(normalizedTitle)
+                                <h2
+                                  key={index}
+                                  id={sectionId}
+                                  style={{
+                                    color: titleColor,
+                                    fontWeight: 700,
+                                    fontSize: currentTemplateStyle.titleSize,
+                                    marginTop:
+                                      currentTemplateStyle.titleSpacing,
+                                    marginBottom: "12px",
+                                    lineHeight: "1.4",
+                                    scrollMarginTop: "80px", // مسافة عند التمرير
+                                  }}
+                                  className="scroll-mt-20"
+                                >
+                                  {trimmed}
+                                </h2>
                               );
                             }
-                          );
-
-                          const isTitle =
-                            trimmed.length < 100 &&
-                            (trimmed.includes(":") ||
-                              sectionPattern.test(trimmed) ||
-                              matchesCustomSection ||
-                              trimmed === researchTopic ||
-                              (index < 3 && trimmed.length < 50));
-
-                          if (isTitle) {
-                            // منع تكرار الأقسام
-                            if (seenSections.has(normalizedTitle)) {
-                              return null; // لا نعرض القسم المكرر
-                            }
-                            seenSections.add(normalizedTitle);
-
-                            // إنشاء معرف فريد للقسم
-                            const sectionId = `section-${index}-${trimmed
-                              .replace(/\s+/g, "-")
-                              .replace(/[^\w-]/g, "")}`;
 
                             return (
-                              <h2
+                              <p
                                 key={index}
-                                id={sectionId}
                                 style={{
-                                  color: titleColor,
-                                  fontWeight: 700,
-                                  fontSize: currentTemplateStyle.titleSize,
-                                  marginTop: currentTemplateStyle.titleSpacing,
-                                  marginBottom: "12px",
-                                  lineHeight: "1.4",
-                                  scrollMarginTop: "80px", // مسافة عند التمرير
+                                  color: contentColor,
+                                  fontSize: currentTemplateStyle.contentSize,
+                                  lineHeight: currentTemplateStyle.lineHeight,
+                                  marginBottom: currentTemplateStyle.spacing,
+                                  paddingRight: "8px",
+                                  fontWeight: 400,
                                 }}
-                                className="scroll-mt-20"
                               >
                                 {trimmed}
-                              </h2>
+                              </p>
                             );
-                          }
+                          })
+                          .filter(Boolean); // إزالة العناصر null
+                      })()}
 
-                          return (
-                            <p
-                              key={index}
-                              style={{
-                                color: contentColor,
-                                fontSize: currentTemplateStyle.contentSize,
-                                lineHeight: currentTemplateStyle.lineHeight,
-                                marginBottom: currentTemplateStyle.spacing,
-                                paddingRight: "8px",
-                                fontWeight: 400,
-                              }}
-                            >
-                              {trimmed}
-                            </p>
-                          );
-                        })
-                        .filter(Boolean); // إزالة العناصر null
-                    })()}
+                      {/* Display References */}
+                      {references.length > 0 && (
+                        <div className="mt-8 pt-8 border-t-2 border-gray-300">
+                          <h2
+                            className="text-2xl font-bold mb-6"
+                            style={{ color: titleColor }}
+                          >
+                            المراجع
+                          </h2>
+                          <div className="space-y-4" dir="rtl">
+                            {references.map((ref, index) => {
+                              let formattedRef = "";
+                              const url = ref.url;
 
-                    {/* Display References */}
-                    {references.length > 0 && (
-                      <div className="mt-8 pt-8 border-t-2 border-gray-300">
-                        <h2
-                          className="text-2xl font-bold mb-6"
-                          style={{ color: titleColor }}
-                        >
-                          المراجع
-                        </h2>
-                        <div className="space-y-4" dir="rtl">
-                          {references.map((ref, index) => {
-                            let formattedRef = "";
-                            const url = ref.url;
-
-                            if (referenceStyle === "apa") {
-                              // تنسيق APA للمراجع الإلكترونية: Author, A. A. (Year, Month Day). Title. Website Name. URL
-                              const currentDate = new Date();
-                              const year = currentDate.getFullYear();
-                              const monthNames = {
-                                January: "يناير",
-                                February: "فبراير",
-                                March: "مارس",
-                                April: "أبريل",
-                                May: "مايو",
-                                June: "يونيو",
-                                July: "يوليو",
-                                August: "أغسطس",
-                                September: "سبتمبر",
-                                October: "أكتوبر",
-                                November: "نوفمبر",
-                                December: "ديسمبر",
-                              };
-                              const month =
-                                monthNames[
-                                  currentDate.toLocaleDateString("en-US", {
+                              if (referenceStyle === "apa") {
+                                // تنسيق APA للمراجع الإلكترونية: Author, A. A. (Year, Month Day). Title. Website Name. URL
+                                const currentDate = new Date();
+                                const year = currentDate.getFullYear();
+                                const monthNames = {
+                                  January: "يناير",
+                                  February: "فبراير",
+                                  March: "مارس",
+                                  April: "أبريل",
+                                  May: "مايو",
+                                  June: "يونيو",
+                                  July: "يوليو",
+                                  August: "أغسطس",
+                                  September: "سبتمبر",
+                                  October: "أكتوبر",
+                                  November: "نوفمبر",
+                                  December: "ديسمبر",
+                                };
+                                const month =
+                                  monthNames[
+                                    currentDate.toLocaleDateString("en-US", {
+                                      month: "long",
+                                    })
+                                  ] ||
+                                  currentDate.toLocaleDateString("ar-SA", {
                                     month: "long",
-                                  })
-                                ] ||
-                                currentDate.toLocaleDateString("ar-SA", {
-                                  month: "long",
-                                });
-                              const day = currentDate.getDate();
+                                  });
+                                const day = currentDate.getDate();
 
-                              // استخراج اسم الموقع من URL
-                              let websiteName = "";
-                              try {
-                                const urlObj = new URL(url);
-                                websiteName = urlObj.hostname
-                                  .replace("www.", "")
-                                  .split(".")[0];
-                                // تحويل أول حرف إلى كبير
-                                websiteName =
-                                  websiteName.charAt(0).toUpperCase() +
-                                  websiteName.slice(1);
-                              } catch {
-                                websiteName = "موقع إلكتروني";
+                                // استخراج اسم الموقع من URL
+                                let websiteName = "";
+                                try {
+                                  const urlObj = new URL(url);
+                                  websiteName = urlObj.hostname
+                                    .replace("www.", "")
+                                    .split(".")[0];
+                                  // تحويل أول حرف إلى كبير
+                                  websiteName =
+                                    websiteName.charAt(0).toUpperCase() +
+                                    websiteName.slice(1);
+                                } catch {
+                                  websiteName = "موقع إلكتروني";
+                                }
+
+                                formattedRef = `${
+                                  index + 1
+                                }. المرجع الإلكتروني. (${year}، ${month} ${day}). ${websiteName}. تم الاسترجاع من `;
+                              } else if (referenceStyle === "ieee") {
+                                formattedRef = `[${
+                                  index + 1
+                                }] المرجع الإلكتروني، "${url}،" ${new Date().getFullYear()}. [Online]. Available: `;
+                              } else if (referenceStyle === "mla") {
+                                formattedRef = `${
+                                  index + 1
+                                }. المرجع الإلكتروني. ${new Date().toLocaleDateString(
+                                  "ar-SA"
+                                )}. `;
                               }
 
-                              formattedRef = `${
-                                index + 1
-                              }. المرجع الإلكتروني. (${year}، ${month} ${day}). ${websiteName}. تم الاسترجاع من `;
-                            } else if (referenceStyle === "ieee") {
-                              formattedRef = `[${
-                                index + 1
-                              }] المرجع الإلكتروني، "${url}،" ${new Date().getFullYear()}. [Online]. Available: `;
-                            } else if (referenceStyle === "mla") {
-                              formattedRef = `${
-                                index + 1
-                              }. المرجع الإلكتروني. ${new Date().toLocaleDateString(
-                                "ar-SA"
-                              )}. `;
-                            }
-
-                            return (
-                              <div
-                                key={ref.id}
-                                className="p-4 rounded-lg bg-gray-50 border border-gray-200 hover:bg-gray-100 transition-colors"
-                              >
-                                <p
-                                  style={{
-                                    color: contentColor,
-                                    fontSize: currentTemplateStyle.contentSize,
-                                    lineHeight: currentTemplateStyle.lineHeight,
-                                  }}
+                              return (
+                                <div
+                                  key={ref.id}
+                                  className="p-4 rounded-lg bg-gray-50 border border-gray-200 hover:bg-gray-100 transition-colors"
                                 >
-                                  {formattedRef}
-                                  <a
-                                    href={url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-blue-600 hover:text-blue-800 underline"
-                                    dir="ltr"
+                                  <p
+                                    style={{
+                                      color: contentColor,
+                                      fontSize:
+                                        currentTemplateStyle.contentSize,
+                                      lineHeight:
+                                        currentTemplateStyle.lineHeight,
+                                    }}
                                   >
-                                    {url}
-                                  </a>
-                                </p>
-                              </div>
-                            );
-                          })}
+                                    {formattedRef}
+                                    <a
+                                      href={url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-blue-600 hover:text-blue-800 underline"
+                                      dir="ltr"
+                                    >
+                                      {url}
+                                    </a>
+                                  </p>
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
+              </>
             )}
           </div>
         </div>

@@ -19,6 +19,7 @@ const About = lazy(() => import("./pages/About"));
 const AdminLogin = lazy(() => import("./pages/Admin/AdminLogin"));
 const Dashboard = lazy(() => import("./pages/Dashboard/Dashboard"));
 const ResearchNew = lazy(() => import("./pages/Dashboard/ResearchNew"));
+const TransactionHistory = lazy(() => import("./pages/TransactionHistory"));
 
 // Protected Route Component (for regular users)
 function ProtectedRoute({ children }) {
@@ -111,6 +112,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <ResearchNew />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/transaction-history"
+              element={
+                <ProtectedRoute>
+                  <TransactionHistory />
                 </ProtectedRoute>
               }
             />

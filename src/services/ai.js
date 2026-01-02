@@ -134,6 +134,141 @@ export async function generateImage(prompt, options = {}) {
 }
 
 /**
+ * Analyze images and generate research using vision model
+ * @param {Array} images - Array of image objects with base64 data
+ * @param {string} topic - Research topic
+ * @param {Array} sections - Sections to include
+ * @param {string} instructions - Additional instructions
+ */
+export async function analyzeImagesForResearch(
+  images,
+  topic,
+  sections,
+  instructions
+) {
+  try {
+    // Build content with images
+    const content = [
+      {
+        type: "text",
+        text: `${
+          topic || "قم بتحليل الصور التالية وإنشاء بحث علمي شامل"
+        }\n\n${instructions}`,
+      },
+    ];
+
+    // Add all images
+    images.forEach((img) => {
+      content.push({
+        type: "image_url",
+        image_url: {
+          url: img.base64 || img.preview,
+          detail: "high", // Request detailed analysis
+        },
+      });
+    });
+
+    const messages = [
+      {
+        role: "system",
+        content: `أنت باحث أكاديمي متخصص في تحليل الصور وكتابة الأبحاث العلمية.
+قم بتحليل الصور المرفقة بعناية واستخدمها كأساس للبحث.
+اكتب بحثاً علمياً شاملاً بناءً على محتوى وسياق الصور.
+استخدم اللغة العربية الفصحى ومعايير البحث الأكاديمي.
+⚠️ مهم: لا تذكر الصور أو تشير إليها في النص - اكتب البحث مباشرة بناءً على محتواها.`,
+      },
+      {
+        role: "user",
+        content: content,
+      },
+    ];
+
+    return chatCompletion(messages, {
+      model: "gpt-4-vision-preview", // Use vision-capable model
+      max_tokens: 8000,
+      temperature: 0.7,
+    });
+  } catch (error) {
+    console.error("Error analyzing images:", error);
+    throw error;
+  }
+}
+
+/**
+ * Generate illustrative images for research content
+ * @param {string} researchContent - The research text content
+ * @param {number} imageCount - Number of images to generate
+ */
+export async function generateIllustrativeImages(
+  researchContent,
+  imageCount = 3
+) {
+  try {
+    // Extract key concepts/topics from research (simple approach)
+    const topics = extractKeyTopics(researchContent, imageCount);
+
+    const imagePromises = topics.map(async (topic) => {
+      const response = await fetch(`${API_URL}/images/generations`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          prompt: `${topic}, scientific illustration, high quality, professional`,
+          model: "openai/gpt-image-1",
+          n: 1,
+          size: "1024x1024",
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Image generation failed: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return {
+        topic,
+        url: data.data?.[0]?.url || null,
+        base64: data.data?.[0]?.b64_json || null,
+      };
+    });
+
+    return Promise.all(imagePromises);
+  } catch (error) {
+    console.error("Error generating images:", error);
+    throw error;
+  }
+}
+
+// Helper function to extract key topics
+function extractKeyTopics(content, count) {
+  // Simple extraction: Find section headers or key phrases
+  const lines = content.split("\n");
+  const topics = [];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    // Look for section headers (typically shorter lines with meaningful content)
+    if (
+      trimmed.length > 10 &&
+      trimmed.length < 80 &&
+      !trimmed.startsWith("-")
+    ) {
+      topics.push(trimmed);
+      if (topics.length >= count) break;
+    }
+  }
+
+  // Fallback if not enough topics found
+  while (topics.length < count) {
+    topics.push("Scientific illustration");
+  }
+
+  return topics.slice(0, count);
+}
+
+/**
  * Analyze an image and get description
  * @param {string} imageUrl - URL or base64 of the image
  * @param {string} prompt - What to analyze about the image
@@ -185,7 +320,9 @@ export async function generateResearchPaper(
 
   // تعليمات واضحة للأقسام المحددة فقط
   if (sections.length > 0) {
-    userPrompt += `\n⚠️ مهم جداً: اكتب فقط الأقسام التالية ولا تكتب أي أقسام أخرى:\n${sections.join("\n")}\n\n`;
+    userPrompt += `\n⚠️ مهم جداً: اكتب فقط الأقسام التالية ولا تكتب أي أقسام أخرى:\n${sections.join(
+      "\n"
+    )}\n\n`;
     userPrompt += `ممنوع كتابة أي أقسام غير المذكورة أعلاه. اكتب فقط الأقسام المحددة.\n`;
     userPrompt += `⚠️ مهم جداً: لا تكرر أي قسم - كل قسم يجب أن يظهر مرة واحدة فقط.\n`;
     userPrompt += `⚠️ مهم جداً: لا تكتب "فهرس المحتوى" كقسم في المحتوى.\n`;
@@ -422,6 +559,8 @@ export default {
   streamChatCompletion,
   generateImage,
   analyzeImage,
+  analyzeImagesForResearch,
+  generateIllustrativeImages,
   generateResearchPaper,
   generateQuestions,
   solveQuestion,

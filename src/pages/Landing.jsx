@@ -107,7 +107,6 @@ function HeroSection() {
           <motion.h1
             variants={fadeInUp}
             className="text-4xl text-gray-700 sm:text-5xl md:text-6xl font-black leading-tight mb-6"
-
           >
             حوّل أفكارك إلى
             <br />
@@ -313,7 +312,7 @@ function FeaturesSection() {
   };
 
   return (
-    <section className="py-8 px-4 md:px-0 bg-gray-50 relative overflow-hidden">
+    <section className="py-8 bg-gray-50 relative overflow-hidden">
       {/* Background Decorations */}
       <div className="absolute inset-0 pointer-events-none">
         <motion.div
@@ -351,169 +350,167 @@ function FeaturesSection() {
         />
       </div>
 
-      <div className="container relative z-10">
-        {/* Section Header with Scroll Animation */}
+      {/* Section Header with Scroll Animation */}
+      <motion.div
+        variants={titleVariants}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-100px" }}
+        className="text-center mb-12 px-4"
+      >
         <motion.div
-          variants={titleVariants}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: "-100px" }}
-          className="text-center mb-12"
-        >
-          <motion.div
-            initial={{ scale: 0, rotate: -180 }}
-            whileInView={{ scale: 1, rotate: 0 }}
-            viewport={{ once: true }}
-            transition={{ type: "spring", stiffness: 200, delay: 0.2 }}
-            className="w-16 h-16 rounded-2xl mx-auto mb-8 flex items-center justify-center"
-            style={{
-              background: "linear-gradient(135deg, #a8e6cf 0%, #93c5fd 100%)",
-            }}
-          >
-            <Sparkles size={32} className="text-white" />
-          </motion.div>
-          <h2 className="text-3xl md:text-4xl lg:text-5xl text-gray-700 font-extrabold leading-tight mb-4">
-            كل ما تحتاجه في منصة واحدة
-          </h2>
-          <p className="text-lg md:text-xl text-gray-500 max-w-3xl mx-auto">
-            أدوات ذكية مدعومة بالذكاء الاصطناعي لتسهيل رحلتك التعليمية
-          </p>
-        </motion.div>
-
-        {/* Features Grid with Stagger Animation */}
-        <motion.div
-          className="grid px-4 md:px-12 w-full grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8"
-          variants={containerVariants}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: "-50px" }}
-        >
-          {features.map((feature, index) => (
-            <motion.div
-              key={index}
-              variants={itemVariants}
-              whileHover={{ y: -8, transition: { duration: 0.3 } }}
-            >
-              <div
-                className="h-full text-center p-8 rounded-3xl border border-gray-100 bg-white relative overflow-hidden group cursor-pointer"
-                style={{
-                  boxShadow: "0 4px 20px rgba(0, 0, 0, 0.03)",
-                  transition: "all 0.4s ease",
-                }}
-              >
-                {/* Hover Background Effect */}
-                <div
-                  className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                  style={{ background: feature.bgColor }}
-                />
-
-                {/* Animated Icon Container */}
-                <motion.div
-                  className="relative z-10 mx-auto mb-8"
-                  whileHover={{ scale: 1.1, rotate: [0, -10, 10, 0] }}
-                  transition={{ duration: 0.5 }}
-                >
-                  <div
-                    className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${feature.color} flex items-center justify-center shadow-lg mx-auto relative`}
-                  >
-                    {/* Animated Ring */}
-                    <motion.div
-                      className="absolute inset-0 rounded-2xl"
-                      style={{ border: `2px solid ${feature.iconBg}` }}
-                      animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0, 0.5] }}
-                      transition={{ duration: 2, repeat: Infinity }}
-                    />
-                    <feature.icon
-                      size={32}
-                      className="text-white relative z-10"
-                    />
-                  </div>
-                </motion.div>
-
-                {/* Content */}
-                <div className="relative z-10">
-                  <h3 className="text-xl mb-4 font-bold mb-sm group-hover:text-gray-900 transition-colors text-gray-700">
-                    {feature.title}
-                  </h3>
-                  <p className="text-gray-600 group-hover:text-gray-500 font-meduim transition-colors">
-                    {feature.description}
-                  </p>
-                </div>
-
-                {/* Bottom Accent Line */}
-                <motion.div
-                  className="absolute bottom-0 left-0 right-0 h-1 rounded-b-3xl"
-                  style={{
-                    background: `linear-gradient(90deg, ${feature.iconBg}, transparent)`,
-                  }}
-                  initial={{ scaleX: 0 }}
-                  whileHover={{ scaleX: 1 }}
-                  transition={{ duration: 0.4 }}
-                />
-              </div>
-            </motion.div>
-          ))}
-        </motion.div>
-
-        {/* Bottom CTA with Animation */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
+          initial={{ scale: 0, rotate: -180 }}
+          whileInView={{ scale: 1, rotate: 0 }}
           viewport={{ once: true }}
-          transition={{ delay: 0.5, duration: 0.6 }}
-          className="text-center mt-12 md:mt-20 mb-12 md:mb-20"
+          transition={{ type: "spring", stiffness: 200, delay: 0.2 }}
+          className="w-16 h-16 rounded-2xl mx-auto mb-8 flex items-center justify-center relative z-10"
+          style={{
+            background: "linear-gradient(135deg, #a8e6cf 0%, #93c5fd 100%)",
+          }}
         >
-          <Link to="/features">
-            <motion.button
-              className="flex mx-auto cursor-pointer items-center justify-center gap-3 cursor-pointer font-bold text-lg md:text-xl text-white shadow-lg rounded-xl relative overflow-hidden px-8 py-4 md:px-10 md:py-5"
+          <Sparkles size={32} className="text-white" />
+        </motion.div>
+        <h2 className="text-3xl md:text-4xl lg:text-5xl text-gray-700 font-extrabold leading-tight mb-4">
+          كل ما تحتاجه في منصة واحدة
+        </h2>
+        <p className="text-lg md:text-xl text-gray-500 max-w-3xl mx-auto">
+          أدوات ذكية مدعومة بالذكاء الاصطناعي لتسهيل رحلتك التعليمية
+        </p>
+      </motion.div>
+
+      {/* Features Grid with Stagger Animation */}
+      <motion.div
+        className="grid px-4 w-full max-w-7xl mx-auto grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8"
+        variants={containerVariants}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-50px" }}
+      >
+        {features.map((feature, index) => (
+          <motion.div
+            key={index}
+            variants={itemVariants}
+            whileHover={{ y: -8, transition: { duration: 0.3 } }}
+          >
+            <div
+              className="h-full text-center p-8 rounded-3xl border border-gray-100 bg-white relative overflow-hidden group cursor-pointer"
               style={{
-                background:
-                  "linear-gradient(135deg, #1d7c59 0%, #4826c2ff 50%, #9b6328ff 100%)",
+                boxShadow: "0 4px 20px rgba(0, 0, 0, 0.03)",
+                transition: "all 0.4s ease",
               }}
-              whileHover={{
-                scale: 1.05,
-                boxShadow: "0 20px 40px rgba(93, 61, 190, 0.3)",
-              }}
-              whileTap={{ scale: 0.95 }}
-              transition={{ duration: 0.3 }}
             >
-              {/* Animated shine effect */}
-              <motion.div
-                className="absolute inset-0"
-                style={{
-                  background:
-                    "linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)",
-                }}
-                animate={{
-                  x: ["-100%", "200%"],
-                }}
-                transition={{
-                  duration: 2,
-                  repeat: Infinity,
-                  repeatDelay: 1,
-                }}
+              {/* Hover Background Effect */}
+              <div
+                className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                style={{ background: feature.bgColor }}
               />
 
-              <span className="relative z-10">استكشف جميع المميزات</span>
-
-              {/* Animated icon */}
+              {/* Animated Icon Container */}
               <motion.div
-                className="relative z-10"
-                animate={{
-                  x: [0, -5, 0],
-                }}
-                transition={{
-                  duration: 1.5,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                }}
+                className="relative z-10 mx-auto mb-8"
+                whileHover={{ scale: 1.1, rotate: [0, -10, 10, 0] }}
+                transition={{ duration: 0.5 }}
               >
-                <ArrowLeft size={22} />
+                <div
+                  className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${feature.color} flex items-center justify-center shadow-lg mx-auto relative`}
+                >
+                  {/* Animated Ring */}
+                  <motion.div
+                    className="absolute inset-0 rounded-2xl"
+                    style={{ border: `2px solid ${feature.iconBg}` }}
+                    animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0, 0.5] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  />
+                  <feature.icon
+                    size={32}
+                    className="text-white relative z-10"
+                  />
+                </div>
               </motion.div>
-            </motion.button>
-          </Link>
-        </motion.div>
-      </div>
+
+              {/* Content */}
+              <div className="relative z-10">
+                <h3 className="text-xl mb-4 font-bold mb-sm group-hover:text-gray-900 transition-colors text-gray-700">
+                  {feature.title}
+                </h3>
+                <p className="text-gray-600 group-hover:text-gray-500 font-meduim transition-colors">
+                  {feature.description}
+                </p>
+              </div>
+
+              {/* Bottom Accent Line */}
+              <motion.div
+                className="absolute bottom-0 left-0 right-0 h-1 rounded-b-3xl"
+                style={{
+                  background: `linear-gradient(90deg, ${feature.iconBg}, transparent)`,
+                }}
+                initial={{ scaleX: 0 }}
+                whileHover={{ scaleX: 1 }}
+                transition={{ duration: 0.4 }}
+              />
+            </div>
+          </motion.div>
+        ))}
+      </motion.div>
+
+      {/* Bottom CTA with Animation */}
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ delay: 0.5, duration: 0.6 }}
+        className="text-center mt-12 md:mt-20 mb-12 md:mb-20"
+      >
+        <Link to="/features">
+          <motion.button
+            className="flex mx-auto cursor-pointer items-center justify-center gap-3 cursor-pointer font-bold text-lg md:text-xl text-white shadow-lg rounded-xl relative overflow-hidden px-8 py-4 md:px-10 md:py-5"
+            style={{
+              background:
+                "linear-gradient(135deg, #1d7c59 0%, #4826c2ff 50%, #9b6328ff 100%)",
+            }}
+            whileHover={{
+              scale: 1.05,
+              boxShadow: "0 20px 40px rgba(93, 61, 190, 0.3)",
+            }}
+            whileTap={{ scale: 0.95 }}
+            transition={{ duration: 0.3 }}
+          >
+            {/* Animated shine effect */}
+            <motion.div
+              className="absolute inset-0"
+              style={{
+                background:
+                  "linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)",
+              }}
+              animate={{
+                x: ["-100%", "200%"],
+              }}
+              transition={{
+                duration: 2,
+                repeat: Infinity,
+                repeatDelay: 1,
+              }}
+            />
+
+            <span className="relative z-10">استكشف جميع المميزات</span>
+
+            {/* Animated icon */}
+            <motion.div
+              className="relative z-10"
+              animate={{
+                x: [0, -5, 0],
+              }}
+              transition={{
+                duration: 1.5,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+            >
+              <ArrowLeft size={22} />
+            </motion.div>
+          </motion.button>
+        </Link>
+      </motion.div>
     </section>
   );
 }
