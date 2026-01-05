@@ -24,7 +24,11 @@ import {
   ChevronDown,
   Menu,
 } from "lucide-react";
-import { generateResearchPaper } from "../../services/ai";
+
+// ⚠️ OLD AI IMPORT - NOT USED ANYMORE
+// Research generation now goes through n8n webhook
+// import { generateResearchPaper } from "../../services/ai";
+
 import { SketchPicker } from "react-color";
 import { useAuth } from "../../context/AuthContext";
 import { db } from "../../config/firebase";
@@ -1140,62 +1144,71 @@ ${newSections.map((s, i) => `${i + 1}. ${s}`).join("\n")}
         pageCount: pageCount,
       });
 
-      let response;
+      // ✅ RESEARCH GENERATION VIA N8N WEBHOOK
+      // All research generation is now handled by n8n workflow
+      // No local AI code is used for research generation
+      // Endpoint: https://n8n.thekrakhir.cloud/webhook/mvp-research
+      const response = await fetch(
+        "https://n8n.thekrakhir.cloud/webhook/mvp-research",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            topic: researchTopic,
+            sections: allSections,
+          }),
+        }
+      );
 
-      // Use vision model if images are uploaded
-      if (uploadedImages && uploadedImages.length > 0) {
-        const { analyzeImagesForResearch } = await import("../../services/ai");
+      const data = await response.json();
 
-        console.log(
-          `📸 Analyzing ${uploadedImages.length} images for research`
-        );
+      console.log("Webhook response:", data);
 
-        response = await analyzeImagesForResearch(
-          uploadedImages,
-          researchTopic,
-          allSections,
-          additionalInstructions
-        );
-      } else {
-        // Regular text-based research
-        response = await generateResearchPaper(
-          researchTopic,
-          researcherName,
-          supervisorName,
-          allSections,
-          chatHistory.map((msg) => `${msg.role}: ${msg.content}`).join("\n") +
-            additionalInstructions
-        );
+      // Check if request was successful
+      if (!data?.success) {
+        throw new Error("فشل إنشاء البحث عبر الخادم");
       }
 
-      console.log("📦 API Response:", response);
+      // 🔥 النص الناتج من n8n (new format)
+      const generatedText = data?.data?.text || "";
+      const billing = data?.data?.billing; // Optional: access cost info
 
-      const content = response.choices?.[0]?.message?.content || "";
-
-      console.log("📝 Extracted content length:", content.length);
-      console.log("📝 Content preview:", content.substring(0, 200));
-
-      if (!content) {
-        console.error("❌ No content extracted from response!");
-        alert("لم يتم العثور على محتوى في الاستجابة. يرجى المحاولة مرة أخرى.");
-        return;
+      // Log billing/cost info
+      if (billing) {
+        console.log("📊 Research Cost:", {
+          tokens: billing.totalTokens,
+          costSAR: billing.finalCostSAR,
+          costUSD: billing.totalCostUSD,
+        });
       }
 
-      // إضافة أسماء الطالب والمشرف في بداية البحث
-      const contentWithNames = addNamesToContent(content);
+      if (!generatedText) {
+        throw new Error("لم يتم توليد محتوى");
+      }
+
+      // Add names to content if provided
+      const contentWithNames = addNamesToContent(generatedText);
       setResearchContent(contentWithNames);
+
       setChatHistory([{ role: "assistant", content: "تم إنشاء البحث بنجاح!" }]);
 
       console.log("✅ Research content set successfully");
 
-      // Generate illustrative images if enabled
+      // 🎨 OPTIONAL: IMAGE GENERATION (Still uses local AI code)
+      // This is the ONLY place where local AI code is still used
+      // Only runs if user enables "auto-generate images" checkbox
       if (autoGenerateImages) {
         console.log("🎨 Generating illustrative images...");
         try {
           const { generateIllustrativeImages } = await import(
             "../../services/ai"
           );
-          const generatedImages = await generateIllustrativeImages(content, 3);
+          const generatedImages = await generateIllustrativeImages(
+            contentWithNames,
+            3
+          ); // Use contentWithNames here
 
           console.log(`✅ Generated ${generatedImages.length} images`);
 
@@ -1224,13 +1237,6 @@ ${newSections.map((s, i) => `${i + 1}. ${s}`).join("\n")}
           );
           // Don't fail the whole research if images fail
         }
-      }
-
-      // Capture token usage if available
-      if (response.usage) {
-        setTokenUsage(response.usage);
-        // Deduct cost from user balance
-        await deductResearchCost(response.usage);
       }
 
       // Save initial state for change detection
@@ -1831,6 +1837,35 @@ ${
                     />
                   </div>
                 </div>
+
+                {/* Generate Research Button - Moved here for better visibility */}
+                <div className="mt-4">
+                  <button
+                    onClick={handleGenerateResearch}
+                    disabled={
+                      loading ||
+                      (!researchTopic.trim() &&
+                        (!uploadedImages || uploadedImages.length === 0))
+                    }
+                    className="w-full px-4 sm:px-6 lg:px-8 py-3 sm:py-4 lg:py-5 cursor-pointer rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-base sm:text-lg lg:text-xl shadow-md hover:shadow-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2 sm:gap-4"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="animate-spin" size={24} />
+                        <span>جاري الإنشاء...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles size={24} />
+                        <span>
+                          {researchContent.trim()
+                            ? "إنشاء بحث جديد"
+                            : "إنشاء البحث"}
+                        </span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -1990,33 +2025,6 @@ ${
 
                 {/* Action Buttons */}
                 <div className="space-y-3">
-                  {/* Create New Research Button */}
-                  <button
-                    onClick={handleGenerateResearch}
-                    disabled={
-                      loading ||
-                      (!researchTopic.trim() &&
-                        (!uploadedImages || uploadedImages.length === 0))
-                    }
-                    className="w-full px-4 sm:px-6 lg:px-8 py-3 sm:py-4 lg:py-5 cursor-pointer rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-base sm:text-lg lg:text-xl shadow-md hover:shadow-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2 sm:gap-4"
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="animate-spin" size={24} />
-                        <span>جاري الإنشاء...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles size={24} />
-                        <span>
-                          {researchContent.trim()
-                            ? "إنشاء بحث جديد"
-                            : "إنشاء البحث"}
-                        </span>
-                      </>
-                    )}
-                  </button>
-
                   {/* Add Content Section - Only show if research exists */}
                   {researchContent.trim() && (
                     <>
