@@ -1156,6 +1156,7 @@ ${newSections.map((s, i) => `${i + 1}. ${s}`).join("\n")}
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
+            userId: currentUser.uid, // 🔴 Required for n8n to deduct balance & save research
             topic: researchTopic,
             sections: allSections,
           }),
