@@ -1,0 +1,25 @@
+{
+  "name": "firebase-balance-api",
+  "version": "1.0.0",
+  "description": "Firebase backend API for n8n workflow - handles user balance operations",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": [
+    "firebase",
+    "n8n",
+    "api",
+    "balance"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.18.2",
+    "firebase-admin": "^12.0.0",
+    "dotenv": "^16.4.5",
+    "cors": "^2.8.5"
+  }
+}
