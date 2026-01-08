@@ -1,0 +1,278 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "mvp-research",
+        "responseMode": "responseNode",
+        "options": {
+          "cors": true
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [-336, 0],
+      "id": "230fc216-ccb6-4e6b-a51a-c5f466b4226d",
+      "name": "Webhook",
+      "webhookId": "4c079212-c807-4ae9-8424-2834ac23bd6d"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const { userId, topic, sections = [] } = $json.body;\n\nif (!userId) throw new Error(\"Missing userId\");\nif (!topic) throw new Error(\"Missing topic\");\n\nconst sectionsText = sections.join(\"، \");\n\nconst prompt = `\nأنت باحث أكاديمي متخصص.\n\nاكتب بحثًا علميًا باللغة العربية فقط بعنوان:\n\"${topic}\"\n\nالتزم بالأقسام التالية فقط:\n${sectionsText}\n\nاكتب بأسلوب أكاديمي رسمي بدون HTML أو Markdown.\n`;\n\nreturn {\n  userId,\n  prompt\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-160, 0],
+      "id": "783711b8-0048-479f-8863-f9e73ffc4b72",
+      "name": "Build Prompt"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [1520, 0],
+      "id": "647a349d-c19c-4658-a4a8-36f778149c6e",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Handle different response structures from AIML API\n// Sometimes usage is at $json.usage, sometimes at response level\nconst response = $json;\nconst usage = response.usage || response.data?.usage || {};\n\n// Extract token counts with fallbacks\nconst inputTokens = usage.prompt_tokens || 0;\nconst outputTokens = usage.completion_tokens || 0;\nconst totalTokens = usage.total_tokens || (inputTokens + outputTokens);\n\n// Pricing for GPT-5-nano (AIML API)\nconst INPUT_PRICE_PER_1M = 0.105;\nconst OUTPUT_PRICE_PER_1M = 0.42;\nconst USD_TO_SAR = 3.75;\nconst MARKUP = 2;\n\n// Calculate costs\nconst inputCostUSD = (inputTokens / 1_000_000) * INPUT_PRICE_PER_1M;\nconst outputCostUSD = (outputTokens / 1_000_000) * OUTPUT_PRICE_PER_1M;\nconst totalCostUSD = inputCostUSD + outputCostUSD;\nconst finalCostSAR = totalCostUSD * USD_TO_SAR * MARKUP;\n\nif (finalCostSAR <= 0) {\n  throw new Error(\"Invalid cost calculation\");\n}\n\n// Extract text content\nconst text = response.choices?.[0]?.message?.content || response.text || '';\n\nif (!text) {\n  throw new Error('No text content found in API response');\n}\n\nreturn {\n  userId: $node[\"Build Prompt\"].json.userId, // Explicitly pass userId\n  text: text,\n  billing: {\n    promptTokens: inputTokens,\n    completionTokens: outputTokens,\n    totalTokens,\n    inputCostUSD,\n    outputCostUSD,\n    totalCostUSD,\n    finalCostSAR,\n    currency: \"SAR\",\n    markup: MARKUP\n  }\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [496, 0],
+      "id": "4806e34a-c35f-45bb-b4d6-f97fccf2248c",
+      "name": "Calculate Cost"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.aimlapi.com/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer 24846e8f3bce499aaf46ae76bb75f388"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.requestBody }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [288, 0],
+      "id": "e39e1118-a5b7-4aca-866e-f88286bfe804",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const prompt = $input.item.json.prompt;\n\nreturn {\n  json: {\n    requestBody: JSON.stringify({\n      model: \"openai/gpt-5-nano-2025-08-07\",\n      messages: [{\n        role: \"user\",\n        content: prompt\n      }],\n      temperature: 0.7,\n      max_tokens: 8000  // ← Changed from 2000 to 8000!\n    })\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [48, 0],
+      "id": "f55c6865-3f4b-4bc9-b692-5f9e98b526b8",
+      "name": "Prepare Request Body"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "return {\n  success: true,\n\n  data: {\n    text: $json.text,\n    billing: $json.billing\n  },\n\n  balance: {\n    before: $json.balance,\n    after: $json.balance - $json.billing.finalCostSAR,\n    currency: \"SAR\"\n  },\n\n  meta: {\n    generatedAt: new Date().toISOString(),\n    model: \"gpt-5-nano\",\n    language: \"ar\",\n    tokensUsed: $json.billing.totalTokens\n  }\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1328, 0],
+      "id": "eda2703e-69f1-4254-bc2d-442860fd379d",
+      "name": "Format Response"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://firebase-api-alpha.vercel.app/api/user/{{ $json.userId }}/balance",
+        "options": {
+          "responseResource": "",
+          "putResponseInField": "firebaseResponse"
+        },
+        "notes": "⚠️ Docker: Change localhost:3001 to firebase-api:3001 if n8n is in Docker container"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [704, 0],
+      "id": "b132a865-8962-481d-94fe-01e62a2cee83",
+      "name": "Get User Balance"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const balance = $json.firebaseResponse.balance;\nconst cost = $json.billing.finalCostSAR;\n\n// Check if user has sufficient balance\nif (balance < cost) {\n  throw new Error(`Insufficient balance: ${balance} SAR < ${cost.toFixed(2)} SAR`);\n}\n\nreturn {\n  ...$json,\n  balance\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [912, 0],
+      "id": "88d8665f-bd1f-4fa3-8cc3-4ecd2f34e6c7",
+      "name": "Check Balance"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://firebase-api-alpha.vercel.app/api/user/{{ $json.userId }}/deduct-balance",
+        "notes": "⚠️ Docker: Change localhost:3001 to firebase-api:3001 if n8n is in Docker container",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ { \"amount\": $json.billing.finalCostSAR } }}",
+        "options": {
+          "putResponseInField": "deductionResponse"
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [1120, 0],
+      "id": "898449c3-69da-46a4-8316-b46993089f8f",
+      "name": "Deduct Balance"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Build Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Prompt": {
+      "main": [
+        [
+          {
+            "node": "Prepare Request Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Cost": {
+      "main": [
+        [
+          {
+            "node": "Get User Balance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Calculate Cost",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Request Body": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get User Balance": {
+      "main": [
+        [
+          {
+            "node": "Check Balance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Balance": {
+      "main": [
+        [
+          {
+            "node": "Deduct Balance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deduct Balance": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "c84ecd46-f4cc-407f-8cab-d978712122ff",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "7ba9cf0b4c17a1ada11373db326a59f871a3ee85280bffd3ce36c5534c0053f2"
+  },
+  "id": "otel1J6T9K0JPRKs",
+  "tags": []
+}
