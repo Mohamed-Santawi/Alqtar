@@ -98,7 +98,7 @@
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "return {\n  success: true,\n\n  data: {\n    text: $json.text,\n    billing: $json.billing\n  },\n\n  balance: {\n    before: $json.balance,\n    after: $json.balance - $json.billing.finalCostSAR,\n    currency: \"SAR\"\n  },\n\n  meta: {\n    generatedAt: new Date().toISOString(),\n    model: \"gpt-5-nano\",\n    language: \"ar\",\n    tokensUsed: $json.billing.totalTokens\n  }\n};\n"
+        "jsCode": "const balanceNode = $node[\"Check Balance\"].json;\nconst deductionResponse = $json;\n\nreturn {\n  success: true,\n\n  data: {\n    text: balanceNode.text,\n    billing: balanceNode.billing\n  },\n\n  balance: {\n    before: balanceNode.balance,\n    after: deductionResponse.balanceAfter || (balanceNode.balance - balanceNode.billing.finalCostSAR),\n    currency: \"SAR\"\n  },\n\n  meta: {\n    generatedAt: new Date().toISOString(),\n    model: \"gpt-5-nano\",\n    language: \"ar\",\n    tokensUsed: balanceNode.billing.totalTokens\n  }\n};\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -109,9 +109,7 @@
     {
       "parameters": {
         "url": "=https://firebase-api-alpha.vercel.app/api/user/{{ $json.userId }}/balance",
-        "options": {
-          "putResponseInField": "firebaseResponse"
-        }
+        "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
@@ -122,7 +120,7 @@
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const balance = $json.firebaseResponse.balance;\nconst cost = $json.billing.finalCostSAR;\n\n// Check if user has sufficient balance\nif (balance < cost) {\n  throw new Error(`Insufficient balance: ${balance} SAR < ${cost.toFixed(2)} SAR`);\n}\n\nreturn {\n  ...$json,\n  balance\n};"
+        "jsCode": "const apiResponse = $json;\nconst billingNode = $node[\"Calculate Cost\"].json.billing;\n\n// Handle potential missing data gracefully\nconst balance = apiResponse.balance;\nconst cost = billingNode.finalCostSAR;\n\nif (balance === undefined) {\n  throw new Error(\"API Response missing balance field\");\n}\n\n// Check if user has sufficient balance\nif (balance < cost) {\n  throw new Error(`Insufficient balance: ${balance} SAR < ${cost.toFixed(2)} SAR`);\n}\n\nreturn {\n  ...apiResponse,\n  billing: billingNode,\n  text: $node[\"Calculate Cost\"].json.text\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -146,9 +144,7 @@
         "sendBody": true,
         "contentType": "json",
         "body": "={{ {\"amount\": $json.billing.finalCostSAR} }}",
-        "options": {
-          "putResponseInField": "deductionResponse"
-        }
+        "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
