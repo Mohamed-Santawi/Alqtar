@@ -174,7 +174,7 @@
         "contentType": "json",
         "body": "={{ {\"amount\": $json.billing.finalCostSAR} }}",
         "options": {},
-        "specifyBody": "={\n  \"amount\": {{ Number($json.billing.finalCostSAR.toFixed(6)) }}\n}"
+        "specifyBody": "{\n  \"amount\": {{ Number($json.billing.finalCostSAR.toFixed(6)) }}\n}"
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,

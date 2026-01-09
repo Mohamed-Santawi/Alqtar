@@ -167,7 +167,7 @@
           ]
         },
         "sendBody": true,
-        "specifyBody": "={\n  \"amount\": {{ Number($json.billing.finalCostSAR.toFixed(6)) }}\n}",
+        "specifyBody": "{\n  \"amount\": {{ Number($json.billing.finalCostSAR.toFixed(6)) }}\n}",
         "bodyParameters": {
           "parameters": [
             {}
