@@ -1147,9 +1147,9 @@ ${newSections.map((s, i) => `${i + 1}. ${s}`).join("\n")}
       // ✅ RESEARCH GENERATION VIA N8N WEBHOOK
       // All research generation is now handled by n8n workflow
       // No local AI code is used for research generation
-      // Endpoint: https://n8n.thekrakhir.cloud/webhook/mvp-research-v2
+      // Endpoint: https://n8n.thekrakhir.cloud/webhook/mvp-research-v3
       const response = await fetch(
-        "https://n8n.thekrakhir.cloud/webhook/mvp-research-v2",
+        "https://n8n.thekrakhir.cloud/webhook/mvp-research-v3",
         {
           method: "POST",
           headers: {

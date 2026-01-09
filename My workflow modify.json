@@ -4,16 +4,17 @@
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "mvp-research-v2",
+        "path": "mvp-research-v3",
         "responseMode": "responseNode",
-        "options": {
-          "cors": true
-        }
+        "options": {}
       },
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
-      "position": [1392, 64],
-      "id": "63b00c53-144c-4877-82ca-466dcc3273df",
+      "position": [
+        1248,
+        0
+      ],
+      "id": "dff6c117-6adc-4f7c-b1d4-1db0a7b5662f",
       "name": "Webhook",
       "webhookId": "4c079212-c807-4ae9-8424-2834ac23bd6d"
     },
@@ -24,8 +25,11 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1568, 64],
-      "id": "c743b266-a43b-4442-9478-3c59a9f3ade9",
+      "position": [
+        1424,
+        0
+      ],
+      "id": "ccb90c32-1610-41c2-bf35-aef3c4dc6320",
       "name": "Build Prompt"
     },
     {
@@ -36,8 +40,11 @@
       },
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
-      "position": [3248, 64],
-      "id": "3fbe9daf-ba52-4e7f-b298-49447db413d1",
+      "position": [
+        3104,
+        0
+      ],
+      "id": "0a9d1132-106f-4f6d-9824-d04240c6cb3c",
       "name": "Respond to Webhook"
     },
     {
@@ -47,8 +54,11 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2224, 64],
-      "id": "95233710-ebb0-41d9-bcfd-21c911e61919",
+      "position": [
+        2080,
+        0
+      ],
+      "id": "c0692628-23f4-4207-b682-64342082eca0",
       "name": "Calculate Cost"
     },
     {
@@ -80,8 +90,11 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
-      "position": [2016, 64],
-      "id": "2f9d6b92-474d-4a92-999f-360aaa549f1f",
+      "position": [
+        1872,
+        0
+      ],
+      "id": "00efe318-8f60-4d96-ab77-9b9f0b3f7f3a",
       "name": "HTTP Request"
     },
     {
@@ -91,49 +104,59 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1776, 64],
-      "id": "dd048e86-fbd2-4bf0-b29a-ceee6b098979",
+      "position": [
+        1632,
+        0
+      ],
+      "id": "a1e0df13-7c74-4fab-a404-85358eb7eb43",
       "name": "Prepare Request Body"
     },
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const balanceNode = $node[\"Check Balance\"].json;\nconst deductionResponse = $json;\n\nreturn {\n  success: true,\n\n  data: {\n    text: balanceNode.text,\n    billing: balanceNode.billing\n  },\n\n  balance: {\n    before: balanceNode.balance,\n    after: deductionResponse.balanceAfter || (balanceNode.balance - balanceNode.billing.finalCostSAR),\n    currency: \"SAR\"\n  },\n\n  meta: {\n    generatedAt: new Date().toISOString(),\n    model: \"gpt-5-nano\",\n    language: \"ar\",\n    tokensUsed: balanceNode.billing.totalTokens\n  }\n};\n"
+        "jsCode": "return {\n  success: true,\n  data: {\n    text: $json.text,\n    billing: $json.billing\n  },\n  balance: {\n    before: $json.balance,\n    after: $json.balance - $json.billing.finalCostSAR,\n    currency: \"SAR\"\n  },\n  meta: {\n    generatedAt: new Date().toISOString(),\n    model: \"gpt-4.1-nano\",\n    language: \"ar\",\n    tokensUsed: $json.billing.totalTokens\n  }\n};\n\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [3056, 64],
-      "id": "370f70b6-6b67-4468-b5c3-e78ecb3995e8",
+      "position": [
+        2912,
+        0
+      ],
+      "id": "c608286f-8636-41ac-9596-8d17fe161743",
       "name": "Format Response"
     },
     {
       "parameters": {
-        "url": "=https://firebase-api-alpha.vercel.app/api/user/{{ $json.userId }}/balance",
-        "options": {
-          "putResponseInField": "firebaseResponse"
-        }
+        "url": "=https://firebase-api-alpha.vercel.app/api/user/{{$node[\"Calculate Cost\"].json.userId}}/balance",
+        "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
-      "position": [2432, 64],
-      "id": "bf35e577-11aa-468d-b4e4-0f2636534840",
+      "position": [
+        2288,
+        0
+      ],
+      "id": "22554da8-85b1-40ec-8d69-7914eb4c6bea",
       "name": "Get User Balance"
     },
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "// Ensure Firebase API response exists\nif (!$json.firebaseResponse) {\n  throw new Error(\"Firebase API did not return a response\");\n}\n\nconst { balance, userId } = $json.firebaseResponse;\n\n// Validate balance\nif (typeof balance !== \"number\") {\n  throw new Error(\"Invalid balance returned from Firebase API\");\n}\n\nconst cost = $json.billing.finalCostSAR;\n\n// Check balance\nif (balance < cost) {\n  throw new Error(`Insufficient balance: ${balance} SAR < ${cost.toFixed(2)} SAR`);\n}\n\n// Pass everything forward\nreturn {\n  ...$json,\n  userId,\n  balance,\n};"
+        "jsCode": "// Firebase API response\nconst balance = $json.balance;\n\n// Data from Calculate Cost node\nconst research = $node[\"Calculate Cost\"].json;\nconst cost = research.billing.finalCostSAR;\n\nif (balance < cost) {\n  throw new Error(\n    `Insufficient balance: ${balance} SAR < ${cost.toFixed(3)} SAR`\n  );\n}\n\nreturn {\n  ...research,\n  balance\n};\n\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2640, 64],
-      "id": "bfbbc7ec-65dc-4678-97b0-8fb88cdad848",
+      "position": [
+        2496,
+        0
+      ],
+      "id": "a047fcc4-2108-483f-a16d-84cbd8daac94",
       "name": "Check Balance"
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://firebase-api-alpha.vercel.app/api/user/{{ $json.userId }}/deduct-balance",
+        "url": "=https://firebase-api-alpha.vercel.app/api/user/{{$json.userId}}/deduct-balance",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -144,14 +167,21 @@
           ]
         },
         "sendBody": true,
-        "contentType": "json",
-        "body": "={{ {\"amount\": $json.billing.finalCostSAR} }}",
+        "specifyBody": "={\n  \"amount\": {{ Number($node[\"Calculate Cost\"].json.billing.finalCostSAR.toFixed(6)) }}\n}",
+        "bodyParameters": {
+          "parameters": [
+            {}
+          ]
+        },
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
-      "position": [2848, 64],
-      "id": "a04669c0-ff91-470c-bd35-93ff274ed54a",
+      "position": [
+        2704,
+        0
+      ],
+      "id": "7004aeb9-1146-497d-a029-196d23c94f9b",
       "name": "Deduct Balance"
     }
   ],
@@ -262,10 +292,10 @@
     "executionOrder": "v1",
     "availableInMCP": false
   },
-  "versionId": "997da196-48c8-4a75-b59d-46051defcfdf",
+  "versionId": "0ba1f990-4cd4-40d6-8dc0-73be214c75d1",
   "meta": {
     "instanceId": "7ba9cf0b4c17a1ada11373db326a59f871a3ee85280bffd3ce36c5534c0053f2"
   },
-  "id": "f5y38gDHdCErqu7E",
+  "id": "77Tcm7CoxjUsuCMV",
   "tags": []
 }

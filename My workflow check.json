@@ -4,16 +4,17 @@
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "mvp-research-v2",
+        "path": "mvp-research-v3",
         "responseMode": "responseNode",
-        "options": {
-          "cors": true
-        }
+        "options": {}
       },
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
-      "position": [1392, 64],
-      "id": "63b00c53-144c-4877-82ca-466dcc3273df",
+      "position": [
+        0,
+        0
+      ],
+      "id": "58b64953-477a-47de-8692-e0d696454c01",
       "name": "Webhook",
       "webhookId": "4c079212-c807-4ae9-8424-2834ac23bd6d"
     },
@@ -24,8 +25,11 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1568, 64],
-      "id": "c743b266-a43b-4442-9478-3c59a9f3ade9",
+      "position": [
+        176,
+        0
+      ],
+      "id": "923220af-a515-49c4-be62-618d1855982f",
       "name": "Build Prompt"
     },
     {
@@ -36,19 +40,25 @@
       },
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
-      "position": [3248, 64],
-      "id": "3fbe9daf-ba52-4e7f-b298-49447db413d1",
+      "position": [
+        1856,
+        0
+      ],
+      "id": "0b1e5c97-910a-4eb0-91df-7b9f3fae26b3",
       "name": "Respond to Webhook"
     },
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "// Handle different response structures from AIML API\n// Sometimes usage is at $json.usage, sometimes at response level\nconst response = $json;\nconst usage = response.usage || response.data?.usage || {};\n\n// Extract token counts with fallbacks\nconst inputTokens = usage.prompt_tokens || 0;\nconst outputTokens = usage.completion_tokens || 0;\nconst totalTokens = usage.total_tokens || (inputTokens + outputTokens);\n\n// Pricing for GPT-5-nano (AIML API)\nconst INPUT_PRICE_PER_1M = 0.105;\nconst OUTPUT_PRICE_PER_1M = 0.42;\nconst USD_TO_SAR = 3.75;\nconst MARKUP = 2;\n\n// Calculate costs\nconst inputCostUSD = (inputTokens / 1_000_000) * INPUT_PRICE_PER_1M;\nconst outputCostUSD = (outputTokens / 1_000_000) * OUTPUT_PRICE_PER_1M;\nconst totalCostUSD = inputCostUSD + outputCostUSD;\nconst finalCostSAR = totalCostUSD * USD_TO_SAR * MARKUP;\n\nif (finalCostSAR <= 0) {\n  throw new Error(\"Invalid cost calculation\");\n}\n\n// Extract text content\nconst text = response.choices?.[0]?.message?.content || response.text || '';\n\nif (!text) {\n  throw new Error('No text content found in API response');\n}\n\nreturn {\n  userId: $node[\"Build Prompt\"].json.userId, // Explicitly pass userId\n  text: text,\n  billing: {\n    promptTokens: inputTokens,\n    completionTokens: outputTokens,\n    totalTokens,\n    inputCostUSD,\n    outputCostUSD,\n    totalCostUSD,\n    finalCostSAR,\n    currency: \"SAR\",\n    markup: MARKUP\n  }\n};\n"
+        "jsCode": "// Handle different response structures from AIML API\r\n// Sometimes usage is at $json.usage, sometimes at response level\r\nconst response = $json;\r\nconst usage = response.usage || response.data?.usage || {};\r\n\r\n// Extract token counts with fallbacks and ensure they are numbers\r\nconst inputTokens = Number(usage.prompt_tokens || 0);\r\nconst outputTokens = Number(usage.completion_tokens || 0);\r\nconst totalTokens = Number(usage.total_tokens || inputTokens + outputTokens);\r\n\r\n// Pricing for GPT-5-nano (AIML API)\r\nconst INPUT_PRICE_PER_1M = 0.105;\r\nconst OUTPUT_PRICE_PER_1M = 0.42;\r\nconst USD_TO_SAR = 3.75;\r\nconst MARKUP = 2;\r\n\r\n// Calculate costs\r\nconst inputCostUSD = (inputTokens / 1_000_000) * INPUT_PRICE_PER_1M;\r\nconst outputCostUSD = (outputTokens / 1_000_000) * OUTPUT_PRICE_PER_1M;\r\nconst totalCostUSD = inputCostUSD + outputCostUSD;\r\nlet finalCostSAR = totalCostUSD * USD_TO_SAR * MARKUP;\r\n\r\n// Ensure a minimum charge of 0.01 SAR to avoid 'Invalid amount' error\r\n// This also handles NaN or zero values by setting a base 0.01 fee\r\nif (isNaN(finalCostSAR) || finalCostSAR < 0.01) {\r\n  finalCostSAR = 0.01;\r\n}\r\n\r\n// Extract text content\r\nconst text = response.choices?.[0]?.message?.content || response.text || \"\";\r\n\r\nif (!text) {\r\n  throw new Error(\"No text content found in API response\");\r\n}\r\n\r\nreturn {\r\n  userId: $node[\"Build Prompt\"].json.userId, // Explicitly pass userId\r\n  text: text,\r\n  billing: {\r\n    promptTokens: inputTokens,\r\n    completionTokens: outputTokens,\r\n    totalTokens,\r\n    inputCostUSD,\r\n    outputCostUSD,\r\n    totalCostUSD,\r\n    finalCostSAR,\r\n    currency: \"SAR\",\r\n    markup: MARKUP,\r\n  },\r\n};\r\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2224, 64],
-      "id": "95233710-ebb0-41d9-bcfd-21c911e61919",
+      "position": [
+        832,
+        0
+      ],
+      "id": "74ff5b0d-8ebd-48d9-864b-f11d8828410d",
       "name": "Calculate Cost"
     },
     {
@@ -80,8 +90,11 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
-      "position": [2016, 64],
-      "id": "2f9d6b92-474d-4a92-999f-360aaa549f1f",
+      "position": [
+        624,
+        0
+      ],
+      "id": "72a1e289-0f3c-4a31-949a-a0c7baf724c7",
       "name": "HTTP Request"
     },
     {
@@ -91,49 +104,59 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1776, 64],
-      "id": "dd048e86-fbd2-4bf0-b29a-ceee6b098979",
+      "position": [
+        384,
+        0
+      ],
+      "id": "720c1a18-1482-4157-b088-dcee46f06390",
       "name": "Prepare Request Body"
     },
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const balanceNode = $node[\"Check Balance\"].json;\nconst deductionResponse = $json;\n\nreturn {\n  success: true,\n\n  data: {\n    text: balanceNode.text,\n    billing: balanceNode.billing\n  },\n\n  balance: {\n    before: balanceNode.balance,\n    after: deductionResponse.balanceAfter || (balanceNode.balance - balanceNode.billing.finalCostSAR),\n    currency: \"SAR\"\n  },\n\n  meta: {\n    generatedAt: new Date().toISOString(),\n    model: \"gpt-5-nano\",\n    language: \"ar\",\n    tokensUsed: balanceNode.billing.totalTokens\n  }\n};\n"
+        "jsCode": "return {\n  success: true,\n  data: {\n    text: $json.text,\n    billing: $json.billing\n  },\n  balance: {\n    before: $json.balance,\n    after: $json.balance - $json.billing.finalCostSAR,\n    currency: \"SAR\"\n  },\n  meta: {\n    generatedAt: new Date().toISOString(),\n    model: \"gpt-4.1-nano\",\n    language: \"ar\",\n    tokensUsed: $json.billing.totalTokens\n  }\n};\n\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [3056, 64],
-      "id": "370f70b6-6b67-4468-b5c3-e78ecb3995e8",
+      "position": [
+        1664,
+        0
+      ],
+      "id": "5d4feec3-cb29-461d-99f4-8f5ce1e25767",
       "name": "Format Response"
     },
     {
       "parameters": {
-        "url": "=https://firebase-api-alpha.vercel.app/api/user/{{ $json.userId }}/balance",
-        "options": {
-          "putResponseInField": "firebaseResponse"
-        }
+        "url": "=https://firebase-api-alpha.vercel.app/api/user/{{$node[\"Calculate Cost\"].json.userId}}/balance",
+        "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
-      "position": [2432, 64],
-      "id": "bf35e577-11aa-468d-b4e4-0f2636534840",
+      "position": [
+        1040,
+        0
+      ],
+      "id": "878df29c-9f4b-4db7-a83f-6009232b1574",
       "name": "Get User Balance"
     },
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "// Ensure Firebase API response exists\nif (!$json.firebaseResponse) {\n  throw new Error(\"Firebase API did not return a response\");\n}\n\nconst { balance, userId } = $json.firebaseResponse;\n\n// Validate balance\nif (typeof balance !== \"number\") {\n  throw new Error(\"Invalid balance returned from Firebase API\");\n}\n\nconst cost = $json.billing.finalCostSAR;\n\n// Check balance\nif (balance < cost) {\n  throw new Error(`Insufficient balance: ${balance} SAR < ${cost.toFixed(2)} SAR`);\n}\n\n// Pass everything forward\nreturn {\n  ...$json,\n  userId,\n  balance,\n};"
+        "jsCode": "// Firebase API response\nconst balance = $json.balance;\n\n// Data from Calculate Cost node\nconst research = $node[\"Calculate Cost\"].json;\nconst cost = research.billing.finalCostSAR;\n\nif (balance < cost) {\n  throw new Error(\n    `Insufficient balance: ${balance} SAR < ${cost.toFixed(3)} SAR`\n  );\n}\n\nreturn {\n  ...research,\n  balance\n};\n\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2640, 64],
-      "id": "bfbbc7ec-65dc-4678-97b0-8fb88cdad848",
+      "position": [
+        1248,
+        0
+      ],
+      "id": "e9e539cc-db1a-4b4a-a697-2c59015965e2",
       "name": "Check Balance"
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://firebase-api-alpha.vercel.app/api/user/{{ $json.userId }}/deduct-balance",
+        "url": "=https://firebase-api-alpha.vercel.app/api/user/{{$json.userId}}/deduct-balance",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -144,14 +167,21 @@
           ]
         },
         "sendBody": true,
-        "contentType": "json",
-        "body": "={{ {\"amount\": $json.billing.finalCostSAR} }}",
+        "specifyBody": "={\n  \"amount\": {{ Number($node[\"Calculate Cost\"].json.billing.finalCostSAR.toFixed(6)) }}\n}",
+        "bodyParameters": {
+          "parameters": [
+            {}
+          ]
+        },
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
-      "position": [2848, 64],
-      "id": "a04669c0-ff91-470c-bd35-93ff274ed54a",
+      "position": [
+        1456,
+        0
+      ],
+      "id": "5a1b0e9e-b183-4e8c-a69d-7d9d3aec463f",
       "name": "Deduct Balance"
     }
   ],
@@ -262,10 +292,10 @@
     "executionOrder": "v1",
     "availableInMCP": false
   },
-  "versionId": "997da196-48c8-4a75-b59d-46051defcfdf",
+  "versionId": "e14251fd-0471-409e-b406-f34f6f2d594f",
   "meta": {
     "instanceId": "7ba9cf0b4c17a1ada11373db326a59f871a3ee85280bffd3ce36c5534c0053f2"
   },
-  "id": "f5y38gDHdCErqu7E",
+  "id": "ZkFlfeRoBo3tpv8B",
   "tags": []
 }
