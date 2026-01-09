@@ -12,7 +12,10 @@
       },
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
-      "position": [1392, 64],
+      "position": [
+        1392,
+        64
+      ],
       "id": "63b00c53-144c-4877-82ca-466dcc3273df",
       "name": "Webhook",
       "webhookId": "4c079212-c807-4ae9-8424-2834ac23bd6d"
@@ -24,7 +27,10 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1568, 64],
+      "position": [
+        1568,
+        64
+      ],
       "id": "c743b266-a43b-4442-9478-3c59a9f3ade9",
       "name": "Build Prompt"
     },
@@ -36,7 +42,10 @@
       },
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
-      "position": [3248, 64],
+      "position": [
+        3248,
+        64
+      ],
       "id": "3fbe9daf-ba52-4e7f-b298-49447db413d1",
       "name": "Respond to Webhook"
     },
@@ -47,7 +56,10 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2224, 64],
+      "position": [
+        2224,
+        64
+      ],
       "id": "95233710-ebb0-41d9-bcfd-21c911e61919",
       "name": "Calculate Cost"
     },
@@ -80,7 +92,10 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
-      "position": [2016, 64],
+      "position": [
+        2016,
+        64
+      ],
       "id": "2f9d6b92-474d-4a92-999f-360aaa549f1f",
       "name": "HTTP Request"
     },
@@ -91,7 +106,10 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1776, 64],
+      "position": [
+        1776,
+        64
+      ],
       "id": "dd048e86-fbd2-4bf0-b29a-ceee6b098979",
       "name": "Prepare Request Body"
     },
@@ -102,7 +120,10 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [3056, 64],
+      "position": [
+        3056,
+        64
+      ],
       "id": "370f70b6-6b67-4468-b5c3-e78ecb3995e8",
       "name": "Format Response"
     },
@@ -115,7 +136,10 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
-      "position": [2432, 64],
+      "position": [
+        2432,
+        64
+      ],
       "id": "bf35e577-11aa-468d-b4e4-0f2636534840",
       "name": "Get User Balance"
     },
@@ -126,7 +150,10 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2640, 64],
+      "position": [
+        2640,
+        64
+      ],
       "id": "bfbbc7ec-65dc-4678-97b0-8fb88cdad848",
       "name": "Check Balance"
     },
@@ -146,11 +173,15 @@
         "sendBody": true,
         "contentType": "json",
         "body": "={{ {\"amount\": $json.billing.finalCostSAR} }}",
-        "options": {}
+        "options": {},
+        "specifyBody": "={\n  \"amount\": {{ Number($json.billing.finalCostSAR.toFixed(6)) }}\n}"
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
-      "position": [2848, 64],
+      "position": [
+        2848,
+        64
+      ],
       "id": "a04669c0-ff91-470c-bd35-93ff274ed54a",
       "name": "Deduct Balance"
     }
