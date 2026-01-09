@@ -163,6 +163,7 @@ app.get("/health", (req, res) => {
     message: "Firebase Balance API is running",
     timestamp: new Date().toISOString(),
     initialized: isInitialized,
+    version: "v1.0.2-robust-balance",
   });
 });
 
@@ -217,6 +218,7 @@ app.get("/api/user/:userId/balance", async (req, res) => {
       balance: Number(balance), // Ensure it's a number
       currency: "SAR",
       isNew: false,
+      serverVersion: "v1.0.2-robust-balance",
     });
   } catch (error) {
     console.error("❌ Error getting balance:", error);
