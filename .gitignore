@@ -5,8 +5,6 @@
 !package-lock.json
 !tsconfig.json
 !vercel.json
-!My workflow.json
-!My workflow update.json
 firebase-admin.json
 serviceAccountKey.json
 serviceAccount.json
