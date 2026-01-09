@@ -230,6 +230,8 @@ app.post("/api/user/:userId/deduct-balance", async (req, res) => {
     const { userId } = req.params;
     const { amount } = req.body;
 
+    console.log(`[DEDUCT] Request Received - User: ${userId}, Body:`, req.body);
+
     if (!userId) {
       return res.status(400).json({
         success: false,
@@ -237,12 +239,32 @@ app.post("/api/user/:userId/deduct-balance", async (req, res) => {
       });
     }
 
-    if (amount === undefined || amount === null || amount < 0) {
+    // Parse and validate amount robustly
+    const numericAmount = parseFloat(amount);
+
+    if (
+      amount === undefined ||
+      amount === null ||
+      isNaN(numericAmount) ||
+      numericAmount < 0
+    ) {
+      console.error(`[DEDUCT ERROR] Invalid amount for user ${userId}:`, {
+        received: amount,
+        type: typeof amount,
+        parsed: numericAmount,
+      });
       return res.status(400).json({
         success: false,
         error: "Invalid amount. Must be a positive number.",
+        details: {
+          received: amount,
+          type: typeof amount,
+        },
       });
     }
+
+    // Ensure we use the parsed number for all calculations
+    const amountToDeduct = numericAmount;
 
     const userRef = db.collection("users").doc(userId);
     const userDoc = await userRef.get();
@@ -258,20 +280,20 @@ app.post("/api/user/:userId/deduct-balance", async (req, res) => {
     const currentBalance = userData.balance ?? 0;
 
     // Check if user has sufficient balance
-    if (currentBalance < amount) {
+    if (currentBalance < amountToDeduct) {
       console.log(
-        `⚠️  Insufficient balance for user ${userId}: ${currentBalance} < ${amount}`
+        `⚠️  Insufficient balance for user ${userId}: ${currentBalance} < ${amountToDeduct}`
       );
       return res.status(400).json({
         success: false,
         error: "Insufficient balance",
         balance: currentBalance,
-        required: amount,
-        shortage: amount - currentBalance,
+        required: amountToDeduct,
+        shortage: amountToDeduct - currentBalance,
       });
     }
 
-    const newBalance = currentBalance - amount;
+    const newBalance = currentBalance - amountToDeduct;
 
     // Update balance in Firestore
     await userRef.update({
@@ -280,7 +302,7 @@ app.post("/api/user/:userId/deduct-balance", async (req, res) => {
     });
 
     console.log(
-      `✅ Deducted ${amount} SAR from user ${userId}: ${currentBalance} → ${newBalance}`
+      `✅ Deducted ${amountToDeduct} SAR from user ${userId}: ${currentBalance} → ${newBalance}`
     );
 
     res.json({
@@ -288,7 +310,7 @@ app.post("/api/user/:userId/deduct-balance", async (req, res) => {
       userId,
       balanceBefore: currentBalance,
       balanceAfter: newBalance,
-      amountDeducted: amount,
+      amountDeducted: amountToDeduct,
       currency: "SAR",
     });
   } catch (error) {
