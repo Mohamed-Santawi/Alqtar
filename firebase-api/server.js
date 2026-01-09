@@ -163,7 +163,7 @@ app.get("/health", (req, res) => {
     message: "Firebase Balance API is running",
     timestamp: new Date().toISOString(),
     initialized: isInitialized,
-    version: "v1.0.2-robust-balance",
+    version: "v1.0.3-final-fix",
   });
 });
 
@@ -218,7 +218,7 @@ app.get("/api/user/:userId/balance", async (req, res) => {
       balance: Number(balance), // Ensure it's a number
       currency: "SAR",
       isNew: false,
-      serverVersion: "v1.0.2-robust-balance",
+      serverVersion: "v1.0.3-final-fix",
     });
   } catch (error) {
     console.error("❌ Error getting balance:", error);
@@ -283,7 +283,8 @@ app.post("/api/user/:userId/deduct-balance", async (req, res) => {
     }
 
     const userData = userDoc.data();
-    const currentBalance = userData.balance ?? 0;
+    // Use the same robust logic as the /balance endpoint (default to 500)
+    const currentBalance = userData.balance || 500;
 
     // Check if user has sufficient balance
     if (currentBalance < amountToDeduct) {
@@ -318,6 +319,7 @@ app.post("/api/user/:userId/deduct-balance", async (req, res) => {
       balanceAfter: newBalance,
       amountDeducted: amountToDeduct,
       currency: "SAR",
+      serverVersion: "v1.0.3-final-fix",
     });
   } catch (error) {
     console.error("❌ Error deducting balance:", error);
