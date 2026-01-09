@@ -203,14 +203,18 @@ app.get("/api/user/:userId/balance", async (req, res) => {
     }
 
     const userData = userDoc.data();
-    const balance = userData.balance ?? 500;
+    // Use a more robust check (||) to handle null, 0, or undefined consistently
+    const balance = userData.balance || 500;
 
-    console.log(`💰 User ${userId} balance: ${balance} SAR`);
+    console.log(`💰 User ${userId} balance retrieved:`, {
+      fromDb: userData.balance,
+      final: balance,
+    });
 
     res.json({
       success: true,
       userId,
-      balance,
+      balance: Number(balance), // Ensure it's a number
       currency: "SAR",
       isNew: false,
     });
