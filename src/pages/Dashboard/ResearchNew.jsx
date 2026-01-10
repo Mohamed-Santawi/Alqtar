@@ -116,6 +116,9 @@ export default function ResearchNew() {
     export: false,
   });
 
+  // Speed Optimization: Generation steps
+  const [generationStep, setGenerationStep] = useState("idle"); // idle, designing, writing, finalizing
+
   const sectionLabels = {
     introduction: "المقدمة",
     tableOfContents: "فهرس المحتوى",
@@ -1068,6 +1071,7 @@ ${newSections.map((s, i) => `${i + 1}. ${s}`).join("\n")}
     }
 
     setLoading(true);
+    setGenerationStep("designing");
     setChatHistory([]);
     setResearchContent("");
     setTokenUsage(null); // Reset token usage
@@ -1147,7 +1151,8 @@ ${newSections.map((s, i) => `${i + 1}. ${s}`).join("\n")}
       // ✅ RESEARCH GENERATION VIA N8N WEBHOOK
       // All research generation is now handled by n8n workflow
       // No local AI code is used for research generation
-      // Endpoint: https://n8n.thekrakhir.cloud/webhook/mvp-research-v3
+      setGenerationStep("writing");
+
       const response = await fetch(
         "https://n8n.thekrakhir.cloud/webhook/mvp-research-v3",
         {
@@ -1164,6 +1169,8 @@ ${newSections.map((s, i) => `${i + 1}. ${s}`).join("\n")}
       );
 
       const data = await response.json();
+
+      setGenerationStep("finalizing");
 
       console.log("Webhook response:", data);
 
@@ -1195,6 +1202,7 @@ ${newSections.map((s, i) => `${i + 1}. ${s}`).join("\n")}
 
       setChatHistory([{ role: "assistant", content: "تم إنشاء البحث بنجاح!" }]);
 
+      setGenerationStep("idle");
       console.log("✅ Research content set successfully");
 
       // 🎨 OPTIONAL: IMAGE GENERATION (Still uses local AI code)
@@ -3027,6 +3035,87 @@ ${
           </div>
         </div>
       </div>
+      {/* Progress Overlay */}
+      {loading && generationStep !== "idle" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl text-center border border-gray-100"
+          >
+            <div className="relative w-24 h-24 mx-auto mb-6">
+              <div className="absolute inset-0 rounded-full border-4 border-emerald-100" />
+              <motion.div
+                className="absolute inset-0 rounded-full border-4 border-emerald-500 border-t-transparent"
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+              />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Sparkles size={32} className="text-emerald-500" />
+              </div>
+            </div>
+
+            <h3 className="text-2xl font-black text-gray-800 mb-6" dir="rtl">
+              جاري إنشاء بحثك الاحترافي
+            </h3>
+
+            <div className="space-y-4" dir="rtl">
+              {[
+                { id: "designing", label: "تخطيط هيكل البحث", icon: "📐" },
+                { id: "writing", label: "كتابة الأقسام والمحتوى", icon: "✍️" },
+                { id: "finalizing", label: "تنسيق وإخراج البحث", icon: "✨" },
+              ].map((step, idx) => {
+                const isActive = generationStep === step.id;
+                const isFinished =
+                  (generationStep === "writing" && step.id === "designing") ||
+                  (generationStep === "finalizing" &&
+                    (step.id === "designing" || step.id === "writing"));
+
+                return (
+                  <div
+                    key={step.id}
+                    className={`flex items-center gap-4 p-4 rounded-2xl transition-all ${
+                      isActive
+                        ? "bg-emerald-50 border-2 border-emerald-200"
+                        : "bg-gray-50 border-2 border-transparent"
+                    }`}
+                  >
+                    <div
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl ${
+                        isActive
+                          ? "bg-emerald-500 shadow-lg"
+                          : isFinished
+                          ? "bg-emerald-100"
+                          : "bg-gray-200"
+                      }`}
+                    >
+                      {isFinished ? "✅" : step.icon}
+                    </div>
+                    <div className="flex-1 text-right">
+                      <p
+                        className={`font-bold ${
+                          isActive ? "text-emerald-700" : "text-gray-500"
+                        }`}
+                      >
+                        {step.label}
+                      </p>
+                      {isActive && (
+                        <p className="text-xs text-emerald-600 font-medium animate-pulse">
+                          قيد التنفيذ...
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <p className="mt-8 text-sm text-gray-400 font-medium">
+              قد تستغرق هذه العملية بضع ثوانٍ
+            </p>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }
