@@ -1154,7 +1154,7 @@ ${newSections.map((s, i) => `${i + 1}. ${s}`).join("\n")}
       setGenerationStep("writing");
 
       const response = await fetch(
-        "https://n8n.thekrakhir.cloud/webhook/mvp-research-v3",
+        "https://n8n.thekrakhir.cloud/webhook/mvp-research-v3-parallel",
         {
           method: "POST",
           headers: {
