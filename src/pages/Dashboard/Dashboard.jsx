@@ -435,7 +435,11 @@ export default function Dashboard() {
                 marginBottom: "12px",
               }}
             >
-              {userData?.subscription?.credits?.toLocaleString() || 500}
+              {(
+                userData?.balance ??
+                userData?.subscription?.credits ??
+                500
+              ).toLocaleString()}
             </p>
             <div
               className="rounded-full overflow-hidden"
@@ -449,7 +453,9 @@ export default function Dashboard() {
                 style={{
                   height: "100%",
                   width: `${Math.min(
-                    ((userData?.subscription?.credits || 500) /
+                    ((userData?.balance ??
+                      userData?.subscription?.credits ??
+                      500) /
                       (isAdmin ? 99999 : 500)) *
                       100,
                     100

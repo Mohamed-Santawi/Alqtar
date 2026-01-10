@@ -82,6 +82,7 @@ export function AuthProvider({ children }) {
         photoURL: firebaseUser.photoURL || "",
         createdAt: serverTimestamp(),
         isAdmin: firebaseUser.email === ADMIN_EMAIL,
+        balance: firebaseUser.email === ADMIN_EMAIL ? 99999 : 500, // Sync with backend API
         subscription: {
           plan: firebaseUser.email === ADMIN_EMAIL ? "pro" : "free",
           credits: firebaseUser.email === ADMIN_EMAIL ? 99999 : 500,
