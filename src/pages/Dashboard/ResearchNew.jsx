@@ -22,9 +22,7 @@ import {
   FileDown,
   ChevronUp,
   ChevronDown,
-  Menu,
 } from "lucide-react";
-import { motion } from "framer-motion";
 
 // ⚠️ OLD AI IMPORT - NOT USED ANYMORE
 // Research generation now goes through n8n webhook
@@ -1186,11 +1184,12 @@ ${newSections.map((s, i) => `${i + 1}. ${s}`).join("\n")}
 
       // Log billing/cost info
       if (billing) {
-        console.log("📊 Research Cost:", {
-          tokens: billing.totalTokens,
-          costSAR: billing.finalCostSAR,
-          costUSD: billing.totalCostUSD,
+        setTokenUsage({
+          prompt_tokens: billing.totalTokens || 0,
+          completion_tokens: 0, // In parallel mode we only get total for now
+          total_tokens: billing.totalTokens || 0,
         });
+        console.log("📊 Research Cost:", billing);
       }
 
       if (!generatedText) {
@@ -3039,18 +3038,10 @@ ${
       {/* Progress Overlay */}
       {loading && generationStep !== "idle" && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl text-center border border-gray-100"
-          >
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl text-center border border-gray-100 animate-in fade-in zoom-in duration-300">
             <div className="relative w-24 h-24 mx-auto mb-6">
               <div className="absolute inset-0 rounded-full border-4 border-emerald-100" />
-              <motion.div
-                className="absolute inset-0 rounded-full border-4 border-emerald-500 border-t-transparent"
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-              />
+              <div className="absolute inset-0 rounded-full border-4 border-emerald-500 border-t-transparent animate-spin" />
               <div className="absolute inset-0 flex items-center justify-center">
                 <Sparkles size={32} className="text-emerald-500" />
               </div>
@@ -3114,7 +3105,7 @@ ${
             <p className="mt-8 text-sm text-gray-400 font-medium">
               قد تستغرق هذه العملية بضع ثوانٍ
             </p>
-          </motion.div>
+          </div>
         </div>
       )}
     </div>
