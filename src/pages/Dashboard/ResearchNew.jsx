@@ -22,6 +22,7 @@ import {
   FileDown,
   ChevronUp,
   ChevronDown,
+  Menu,
 } from "lucide-react";
 
 // ⚠️ OLD AI IMPORT - NOT USED ANYMORE
