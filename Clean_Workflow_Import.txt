@@ -1,0 +1,75 @@
+{
+  "name": "Clean Workflow Import",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "mvp-research-v3",
+        "options": {}
+      },
+      "id": "5f7b8c1a-2d3e-4f5g-6h7i-8j9k0l1m2n3o",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        450,
+        300
+      ],
+      "webhookId": "mvp-research-v3"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Handle different response structures from AIML API\nconst response = $json;\nconst usage = response.usage || response.data?.usage || {};\n\nconst inputTokens = Number(usage.prompt_tokens || 0);\nconst outputTokens = Number(usage.completion_tokens || 0);\nconst totalTokens = Number(usage.total_tokens || inputTokens + outputTokens);\n\nconst INPUT_PRICE_PER_1M = 0.105;\nconst OUTPUT_PRICE_PER_1M = 0.42;\nconst USD_TO_SAR = 3.75;\nconst MARKUP = 2;\n\nconst inputCostUSD = (inputTokens / 1_000_000) * INPUT_PRICE_PER_1M;\nconst outputCostUSD = (outputTokens / 1_000_000) * OUTPUT_PRICE_PER_1M;\nconst totalCostUSD = inputCostUSD + outputCostUSD;\nlet finalCostSAR = totalCostUSD * USD_TO_SAR * MARKUP;\n\nif (isNaN(finalCostSAR) || finalCostSAR < 0.01) {\n  finalCostSAR = 0.01;\n}\n\nconst text = response.choices?.[0]?.message?.content || response.text || \"\";\n\nif (!text) {\n  throw new Error(\"No text content found in API response\");\n}\n\nreturn {\n  userId: $node[\"Build Prompt\"].json.userId,\n  text: text,\n  billing: {\n    promptTokens: inputTokens,\n    completionTokens: outputTokens,\n    totalTokens,\n    inputCostUSD,\n    outputCostUSD,\n    totalCostUSD,\n    finalCostSAR,\n    currency: \"SAR\",\n    markup: MARKUP,\n  },\n};"
+      },
+      "id": "9a8b7c6d-5e4f-3g2h-1i0j-9k8l7m6n5o4p",
+      "name": "Calculate Cost",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1000,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://firebase-api-alpha.vercel.app/api/user/{{ $node[\"Build Prompt\"].json.userId }}/deduct-balance",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"amount\": {{ $json.billing.finalCostSAR }}\n}",
+        "options": {}
+      },
+      "id": "1a2b3c4d-5e6f-7g8h-9i0j-1k2l3m4n5o6p",
+      "name": "Deduct Balance",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1400,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Calculate Cost",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Cost": {
+      "main": [
+        [
+          {
+            "node": "Deduct Balance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

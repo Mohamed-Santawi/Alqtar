@@ -1399,6 +1399,15 @@ ${newSections.map((s, i) => `${i + 1}. ${s}`).join("\n")}
         sectionsCount: allSections.length,
         pageCount: pageCount,
       });
+      console.log("📋 Selected sections state:", {
+        selectedSections,
+        selectedCustomSections,
+        unifiedSectionOrder,
+      });
+      console.log(
+        "⚠️ IMPORTANT: Sending ONLY these sections to n8n:",
+        allSections
+      );
 
       // ✅ RESEARCH GENERATION VIA N8N WEBHOOK
       // All research generation is now handled by n8n workflow
@@ -1546,87 +1555,49 @@ ${newSections.map((s, i) => `${i + 1}. ${s}`).join("\n")}
     const sections = [];
     const seenSections = new Set(); // لمنع التكرار
     const lines = content.split("\n");
-    const allSectionNames = [
-      ...Object.values(sectionLabels),
-      ...customSections,
-      researchTopic,
-    ];
 
     lines.forEach((line, index) => {
       const trimmed = line.trim();
       if (!trimmed) return;
 
+      // ✅ CRITICAL: Only detect lines that start with ## as main sections
+      if (!trimmed.startsWith("##")) {
+        return;
+      }
+
+      // Remove ## prefix
+      const cleanedLine = trimmed.replace(/^##\s+/, "");
+
       // استبعاد الفهرس نفسه من القائمة
-      if (trimmed.includes("فهرس المحتوى") || trimmed.match(/^فهرس/i)) {
+      if (cleanedLine.includes("فهرس المحتوى") || cleanedLine.match(/^فهرس/i)) {
         return;
       }
 
       // استبعاد الأسماء (الطالب/المشرف)
-      if (trimmed.startsWith("الطالب:") || trimmed.startsWith("المشرف:")) {
+      if (
+        cleanedLine.startsWith("الطالب:") ||
+        cleanedLine.startsWith("المشرف:")
+      ) {
         return;
       }
 
-      // استبعاد السطور الطويلة (المحتوى وليس العناوين)
-      if (trimmed.length > 80) {
-        return;
-      }
+      // إنشاء معرف فريد للقسم
+      const sectionKey = cleanedLine
+        .replace(/[:\-–—]/g, "")
+        .trim()
+        .toLowerCase();
 
-      // التحقق إذا كان السطر عنوان قسم (سطر قصير فقط)
-      const isSection = allSectionNames.some((sectionName) => {
-        const normalizedLine = trimmed
-          .replace(/[:\-–—]/g, "")
-          .trim()
-          .toLowerCase();
-        const normalizedSection = sectionName
-          .replace(/[:\-–—]/g, "")
-          .trim()
-          .toLowerCase();
-
-        // مطابقة مباشرة
-        if (normalizedLine === normalizedSection) return true;
-
-        // مطابقة جزئية (للأقسام المخصصة) - فقط إذا كان السطر قصير
-        if (trimmed.length <= 50) {
-          if (
-            normalizedLine.includes(normalizedSection) ||
-            normalizedSection.includes(normalizedLine)
-          ) {
-            return true;
-          }
-        }
-
-        // للأنماط القياسية - فقط السطور القصيرة
-        if (
-          trimmed.length < 50 &&
-          trimmed.match(
-            /^(المقدمة|الملخص|منهجية|المنهجية|النتائج|الخاتمة|المراجع)/i
-          )
-        ) {
-          return true;
-        }
-
-        return false;
-      });
-
-      if (isSection) {
-        // إنشاء معرف فريد للقسم
-        const sectionKey = trimmed
-          .replace(/[:\-–—]/g, "")
-          .trim()
-          .toLowerCase();
-
-        // منع التكرار - إذا كان القسم موجود بالفعل، لا نضيفه
-        if (!seenSections.has(sectionKey)) {
-          seenSections.add(sectionKey);
-          const sectionId = `section-${index}-${trimmed
-            .replace(/\s+/g, "-")
-            .replace(/[^\w-]/g, "")}`;
-          sections.push({
-            id: sectionId,
-            title: trimmed, // العنوان فقط (سطر قصير)
-            index: index,
-          });
-        }
+      // منع التكرار - إذا كان القسم موجود بالفعل، لا نضيفه
+      if (!seenSections.has(sectionKey)) {
+        seenSections.add(sectionKey);
+        const sectionId = `section-${index}-${cleanedLine
+          .replace(/\s+/g, "-")
+          .replace(/[^\w-]/g, "")}`;
+        sections.push({
+          id: sectionId,
+          title: cleanedLine, // العنوان بدون ## prefix
+          index: index,
+        });
       }
     });
 
@@ -2122,7 +2093,7 @@ ${
                 {(researcherName !== initialNames.researcher ||
                   supervisorName !== initialNames.supervisor) &&
                   researchContent && (
-                    <div className="mt-3 px-1">
+                    <div className="mt-5 px-1">
                       <button
                         onClick={handleUpdateNames}
                         className="w-full py-2.5 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 font-bold text-sm transition-all flex items-center justify-center gap-2 border border-blue-200 cursor-pointer"
@@ -2161,6 +2132,175 @@ ${
                       </>
                     )}
                   </button>
+                  {/* Action Buttons */}
+                  <div className="space-y-3">
+                    {/* Add Content Section - Only show if research exists */}
+                    {researchContent.trim() && (
+                      <>
+                        {/* Add New Content Input Section */}
+                        <div className="bg-white rounded-xl p-4 sm:p-6 border-2 border-blue-200 shadow-sm">
+                          <h3
+                            className="text-base sm:text-lg font-bold text-gray-800 mb-3 sm:mb-4 flex items-center gap-2"
+                            dir="rtl"
+                          >
+                            <PlusCircle
+                              size={18}
+                              className="sm:w-5 sm:h-5 text-blue-600"
+                            />
+                            إضافة محتوى جديد للبحث
+                          </h3>
+
+                          <div className="space-y-3 sm:space-y-4">
+                            {/* Section Selector */}
+                            <div>
+                              <label
+                                className="block text-gray-700 font-semibold mb-2 text-sm"
+                                dir="rtl"
+                              >
+                                القسم المطلوب (اختياري)
+                              </label>
+                              <select
+                                value={newContentSection}
+                                onChange={(e) =>
+                                  setNewContentSection(e.target.value)
+                                }
+                                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none text-sm bg-white"
+                                dir="rtl"
+                              >
+                                <option value="">
+                                  اختر القسم (أو اتركه فارغاً)
+                                </option>
+                                {unifiedSectionOrder
+                                  .filter((unifiedKey) => {
+                                    if (unifiedKey.startsWith("standard:")) {
+                                      const key = unifiedKey.replace(
+                                        "standard:",
+                                        ""
+                                      );
+                                      return sectionLabels[key];
+                                    }
+                                    return true;
+                                  })
+                                  .map((unifiedKey) => {
+                                    if (unifiedKey.startsWith("standard:")) {
+                                      const key = unifiedKey.replace(
+                                        "standard:",
+                                        ""
+                                      );
+                                      return (
+                                        <option
+                                          key={unifiedKey}
+                                          value={sectionLabels[key]}
+                                        >
+                                          {sectionLabels[key]}
+                                        </option>
+                                      );
+                                    } else {
+                                      const section = unifiedKey.replace(
+                                        "custom:",
+                                        ""
+                                      );
+                                      return (
+                                        <option
+                                          key={unifiedKey}
+                                          value={section}
+                                        >
+                                          {section}
+                                        </option>
+                                      );
+                                    }
+                                  })}
+                              </select>
+                            </div>
+
+                            {/* Content Input */}
+                            <div>
+                              <label
+                                className="block text-gray-700 font-semibold mb-2 text-sm"
+                                dir="rtl"
+                              >
+                                المحتوى المطلوب إضافته
+                              </label>
+                              <textarea
+                                value={newContentInput}
+                                onChange={(e) =>
+                                  setNewContentInput(e.target.value)
+                                }
+                                placeholder="اكتب المحتوى الذي تريد إضافته للبحث... (مثال: أضف معلومات عن الذكاء الاصطناعي في قسم المقدمة)"
+                                className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none text-sm min-h-[100px] resize-y"
+                                dir="rtl"
+                                disabled={loading}
+                              />
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex gap-2 sm:gap-3">
+                              <button
+                                onClick={handleAddToResearch}
+                                disabled={
+                                  loading ||
+                                  !researchTopic.trim() ||
+                                  (!newContentInput.trim() &&
+                                    !chatMessage.trim())
+                                }
+                                className="flex-1 px-4 sm:px-6 py-2.5 sm:py-3 cursor-pointer rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-sm sm:text-base shadow-md hover:shadow-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                              >
+                                {loading ? (
+                                  <>
+                                    <Loader2
+                                      className="animate-spin"
+                                      size={18}
+                                    />
+                                    <span>جاري الإضافة...</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <PlusCircle size={18} />
+                                    <span>إضافة المحتوى</span>
+                                  </>
+                                )}
+                              </button>
+
+                              <button
+                                onClick={() => {
+                                  setNewContentInput("");
+                                  setNewContentSection("");
+                                }}
+                                disabled={loading}
+                                className="px-6 py-3 cursor-pointer rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold transition-all disabled:opacity-50"
+                              >
+                                <X size={18} />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Add/Update Names Button */}
+                        {(researcherName.trim() || supervisorName.trim()) && (
+                          <button
+                            onClick={handleAddNames}
+                            disabled={loading}
+                            className="w-full px-8 py-4 cursor-pointer rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold shadow-md hover:shadow-lg transition-all disabled:opacity-50 flex items-center justify-center gap-3"
+                          >
+                            <User size={20} />
+                            <span>إضافة/تحديث الأسماء</span>
+                          </button>
+                        )}
+
+                        {/* Formatting Notice */}
+                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                          <p
+                            className="text-sm text-amber-800 text-center"
+                            dir="rtl"
+                          >
+                            💡 <strong>ملاحظة:</strong> التعديلات على القوالب،
+                            الخطوط، الألوان، والزخارف تطبق تلقائياً على البحث
+                            الموجود
+                          </p>
+                        </div>
+                      </>
+                    )}
+                  </div>
 
                   {/* Relocated Action Notice */}
                   {researchContent.trim() &&
@@ -2293,169 +2433,6 @@ ${
                   >
                     <Send size={20} className="sm:w-6 sm:h-6" />
                   </button>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="space-y-3">
-                  {/* Add Content Section - Only show if research exists */}
-                  {researchContent.trim() && (
-                    <>
-                      {/* Add New Content Input Section */}
-                      <div className="bg-white rounded-xl p-4 sm:p-6 border-2 border-blue-200 shadow-sm">
-                        <h3
-                          className="text-base sm:text-lg font-bold text-gray-800 mb-3 sm:mb-4 flex items-center gap-2"
-                          dir="rtl"
-                        >
-                          <PlusCircle
-                            size={18}
-                            className="sm:w-5 sm:h-5 text-blue-600"
-                          />
-                          إضافة محتوى جديد للبحث
-                        </h3>
-
-                        <div className="space-y-3 sm:space-y-4">
-                          {/* Section Selector */}
-                          <div>
-                            <label
-                              className="block text-gray-700 font-semibold mb-2 text-sm"
-                              dir="rtl"
-                            >
-                              القسم المطلوب (اختياري)
-                            </label>
-                            <select
-                              value={newContentSection}
-                              onChange={(e) =>
-                                setNewContentSection(e.target.value)
-                              }
-                              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none text-sm bg-white"
-                              dir="rtl"
-                            >
-                              <option value="">
-                                اختر القسم (أو اتركه فارغاً)
-                              </option>
-                              {unifiedSectionOrder
-                                .filter((unifiedKey) => {
-                                  if (unifiedKey.startsWith("standard:")) {
-                                    const key = unifiedKey.replace(
-                                      "standard:",
-                                      ""
-                                    );
-                                    return sectionLabels[key];
-                                  }
-                                  return true;
-                                })
-                                .map((unifiedKey) => {
-                                  if (unifiedKey.startsWith("standard:")) {
-                                    const key = unifiedKey.replace(
-                                      "standard:",
-                                      ""
-                                    );
-                                    return (
-                                      <option
-                                        key={unifiedKey}
-                                        value={sectionLabels[key]}
-                                      >
-                                        {sectionLabels[key]}
-                                      </option>
-                                    );
-                                  } else {
-                                    const section = unifiedKey.replace(
-                                      "custom:",
-                                      ""
-                                    );
-                                    return (
-                                      <option key={unifiedKey} value={section}>
-                                        {section}
-                                      </option>
-                                    );
-                                  }
-                                })}
-                            </select>
-                          </div>
-
-                          {/* Content Input */}
-                          <div>
-                            <label
-                              className="block text-gray-700 font-semibold mb-2 text-sm"
-                              dir="rtl"
-                            >
-                              المحتوى المطلوب إضافته
-                            </label>
-                            <textarea
-                              value={newContentInput}
-                              onChange={(e) =>
-                                setNewContentInput(e.target.value)
-                              }
-                              placeholder="اكتب المحتوى الذي تريد إضافته للبحث... (مثال: أضف معلومات عن الذكاء الاصطناعي في قسم المقدمة)"
-                              className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none text-sm min-h-[100px] resize-y"
-                              dir="rtl"
-                              disabled={loading}
-                            />
-                          </div>
-
-                          {/* Action Buttons */}
-                          <div className="flex gap-2 sm:gap-3">
-                            <button
-                              onClick={handleAddToResearch}
-                              disabled={
-                                loading ||
-                                !researchTopic.trim() ||
-                                (!newContentInput.trim() && !chatMessage.trim())
-                              }
-                              className="flex-1 px-4 sm:px-6 py-2.5 sm:py-3 cursor-pointer rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-sm sm:text-base shadow-md hover:shadow-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                            >
-                              {loading ? (
-                                <>
-                                  <Loader2 className="animate-spin" size={18} />
-                                  <span>جاري الإضافة...</span>
-                                </>
-                              ) : (
-                                <>
-                                  <PlusCircle size={18} />
-                                  <span>إضافة المحتوى</span>
-                                </>
-                              )}
-                            </button>
-
-                            <button
-                              onClick={() => {
-                                setNewContentInput("");
-                                setNewContentSection("");
-                              }}
-                              disabled={loading}
-                              className="px-6 py-3 cursor-pointer rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold transition-all disabled:opacity-50"
-                            >
-                              <X size={18} />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Add/Update Names Button */}
-                      {(researcherName.trim() || supervisorName.trim()) && (
-                        <button
-                          onClick={handleAddNames}
-                          disabled={loading}
-                          className="w-full px-8 py-4 cursor-pointer rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold shadow-md hover:shadow-lg transition-all disabled:opacity-50 flex items-center justify-center gap-3"
-                        >
-                          <User size={20} />
-                          <span>إضافة/تحديث الأسماء</span>
-                        </button>
-                      )}
-
-                      {/* Formatting Notice */}
-                      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                        <p
-                          className="text-sm text-amber-800 text-center"
-                          dir="rtl"
-                        >
-                          💡 <strong>ملاحظة:</strong> التعديلات على القوالب،
-                          الخطوط، الألوان، والزخارف تطبق تلقائياً على البحث
-                          الموجود
-                        </p>
-                      </div>
-                    </>
-                  )}
                 </div>
               </div>
             </div>
@@ -3075,12 +3052,18 @@ ${
 
                         return researchContent
                           .split("\n")
-                          .filter(
-                            (line) =>
-                              line &&
-                              line.toLowerCase() !== "undefined" &&
-                              line.trim() !== ""
-                          )
+                          .filter((line) => {
+                            if (!line || line.trim() === "") return false;
+                            // Filter out any line containing "undefined" (case-insensitive)
+                            if (/undefined/i.test(line)) {
+                              console.log(
+                                "🚫 Filtered out undefined line:",
+                                line
+                              );
+                              return false;
+                            }
+                            return true;
+                          })
                           .map((line, index) => {
                             const trimmed = line.trim();
                             if (!trimmed) return <br key={index} />;
@@ -3093,8 +3076,16 @@ ${
                               return null;
                             }
 
+                            // Check if line starts with ## (markdown header)
+                            const isMarkdownHeader = /^##\s+/.test(trimmed);
+
+                            // Remove ## prefix if present
+                            const cleanedLine = trimmed
+                              .replace(/^##\s+/, "")
+                              .trim();
+
                             // Detect if line is a title/header
-                            const normalizedTitle = trimmed
+                            const normalizedTitle = cleanedLine
                               .replace(/[:\-–—]/g, "")
                               .trim()
                               .toLowerCase();
@@ -3115,12 +3106,13 @@ ${
                             );
 
                             const isTitle =
-                              trimmed.length < 100 &&
-                              (trimmed.includes(":") ||
-                                sectionPattern.test(trimmed) ||
-                                matchesCustomSection ||
-                                trimmed === researchTopic ||
-                                (index < 3 && trimmed.length < 50));
+                              isMarkdownHeader || // ✅ Detect ## headers
+                              (cleanedLine.length < 100 &&
+                                (cleanedLine.includes(":") ||
+                                  sectionPattern.test(cleanedLine) ||
+                                  matchesCustomSection ||
+                                  cleanedLine === researchTopic ||
+                                  (index < 3 && cleanedLine.length < 50)));
 
                             if (isTitle) {
                               // منع تكرار الأقسام
@@ -3130,7 +3122,7 @@ ${
                               seenSections.add(normalizedTitle);
 
                               // إنشاء معرف فريد للقسم
-                              const sectionId = `section-${index}-${trimmed
+                              const sectionId = `section-${index}-${cleanedLine
                                 .replace(/\s+/g, "-")
                                 .replace(/[^\w-]/g, "")}`;
 
@@ -3155,7 +3147,7 @@ ${
                                   }}
                                   className="scroll-mt-20"
                                 >
-                                  {trimmed}
+                                  {cleanedLine}
                                 </h2>
                               );
                             }
