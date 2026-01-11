@@ -2089,22 +2089,6 @@ ${
                   </div>
                 </div>
 
-                {/* Update Names Button - Appears only when names change */}
-                {(researcherName !== initialNames.researcher ||
-                  supervisorName !== initialNames.supervisor) &&
-                  researchContent && (
-                    <div className="mt-5 px-1">
-                      <button
-                        onClick={handleUpdateNames}
-                        className="w-full py-2.5 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 font-bold text-sm transition-all flex items-center justify-center gap-2 border border-blue-200 cursor-pointer"
-                        dir="rtl"
-                      >
-                        <User className="w-4 h-4" />
-                        تحديث الأسماء في البحث
-                      </button>
-                    </div>
-                  )}
-
                 {/* Generate Research Button - Moved here for better visibility */}
                 <div className="mt-4">
                   <button
@@ -2274,18 +2258,6 @@ ${
                             </div>
                           </div>
                         </div>
-
-                        {/* Add/Update Names Button */}
-                        {(researcherName.trim() || supervisorName.trim()) && (
-                          <button
-                            onClick={handleAddNames}
-                            disabled={loading}
-                            className="w-full px-8 py-4 cursor-pointer rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold shadow-md hover:shadow-lg transition-all disabled:opacity-50 flex items-center justify-center gap-3"
-                          >
-                            <User size={20} />
-                            <span>إضافة/تحديث الأسماء</span>
-                          </button>
-                        )}
 
                         {/* Formatting Notice */}
                         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
