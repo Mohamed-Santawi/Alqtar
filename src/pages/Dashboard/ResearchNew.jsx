@@ -32,7 +32,18 @@ import {
 import { SketchPicker } from "react-color";
 import { useAuth } from "../../context/AuthContext";
 import { db } from "../../config/firebase";
-import { doc, setDoc, onSnapshot } from "firebase/firestore";
+import {
+  doc,
+  setDoc,
+  onSnapshot,
+  collection,
+  query,
+  orderBy,
+  limit,
+  getDocs,
+  addDoc,
+  serverTimestamp,
+} from "firebase/firestore";
 import ResearchSidebar from "../../components/ResearchSidebar";
 import ResearchActionNotice from "../../components/ResearchActionNotice";
 
@@ -71,6 +82,12 @@ export default function ResearchNew() {
     margin: 16,
     borderWidth: 2,
   });
+
+  // Typography controls
+  const [titleFontSize, setTitleFontSize] = useState(24);
+  const [contentFontSize, setContentFontSize] = useState(16);
+  const [titleFontWeight, setTitleFontWeight] = useState("bold");
+  const [contentFontWeight, setContentFontWeight] = useState("normal");
   const [selectedSections, setSelectedSections] = useState({
     introduction: true,
     tableOfContents: true,
@@ -93,6 +110,105 @@ export default function ResearchNew() {
 
   // Page count for research length
   const [pageCount, setPageCount] = useState(10);
+
+  // Research History & Persistence
+  const [researches, setResearches] = useState([]);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Auto-save to localStorage on refresh/unload
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      const stateToSave = {
+        researchTopic,
+        researcherName,
+        supervisorName,
+        researchContent,
+        chatHistory,
+        selectedSections,
+        customSections,
+        selectedCustomSections,
+        unifiedSectionOrder,
+        titleFontSize,
+        contentFontSize,
+        titleFontWeight,
+        contentFontWeight,
+        titleColor,
+        contentColor,
+        fontFamily,
+        references,
+        pageCount,
+        timestamp: Date.now(),
+      };
+
+      localStorage.setItem(
+        "last_research_autosave",
+        JSON.stringify(stateToSave)
+      );
+
+      if (researchTopic.trim() || researchContent.trim()) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [
+    researchTopic,
+    researcherName,
+    supervisorName,
+    researchContent,
+    chatHistory,
+    selectedSections,
+    customSections,
+    selectedCustomSections,
+    unifiedSectionOrder,
+    titleFontSize,
+    contentFontSize,
+    titleFontWeight,
+    contentFontWeight,
+    titleColor,
+    contentColor,
+    fontFamily,
+    references,
+    pageCount,
+  ]);
+
+  // Load from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem("last_research_autosave");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        // If data is less than 24h old and current state is empty, restore
+        if (Date.now() - parsed.timestamp < 24 * 60 * 60 * 1000) {
+          if (!researchTopic && !researchContent) {
+            console.log("🛠️ Restoring research from localStorage");
+            setResearchTopic(parsed.researchTopic || "");
+            setResearcherName(parsed.researcherName || "");
+            setSupervisorName(parsed.supervisorName || "");
+            setResearchContent(parsed.researchContent || "");
+            setChatHistory(parsed.chatHistory || []);
+            setSelectedSections(parsed.selectedSections || {});
+            setCustomSections(parsed.customSections || []);
+            setSelectedCustomSections(parsed.selectedCustomSections || {});
+            setUnifiedSectionOrder(parsed.unifiedSectionOrder || []);
+            setTitleFontSize(parsed.titleFontSize || 24);
+            setContentFontSize(parsed.contentFontSize || 16);
+            setTitleFontWeight(parsed.titleFontWeight || "bold");
+            setContentFontWeight(parsed.contentFontWeight || "normal");
+            setTitleColor(parsed.titleColor || "#000000");
+            setContentColor(parsed.contentColor || "#333333");
+            setFontFamily(parsed.fontFamily || "Cairo");
+            setReferences(parsed.references || []);
+            setPageCount(parsed.pageCount || 10);
+          }
+        }
+      } catch (e) {
+        console.error("Error parsing autosave:", e);
+      }
+    }
+  }, []);
 
   // Track initial state to detect changes
   const [initialSections, setInitialSections] = useState([]);
@@ -415,15 +531,6 @@ export default function ResearchNew() {
   const currentTemplateStyle =
     templateStyles[selectedTemplate] || templateStyles.classic;
 
-  // Debug: Log color changes
-  useEffect(() => {
-    console.log("[STATE] Colors updated:", {
-      titleColor,
-      contentColor,
-      fontFamily,
-    });
-  }, [titleColor, contentColor, fontFamily]);
-
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatHistory]);
@@ -471,6 +578,118 @@ export default function ResearchNew() {
       return () => unsubscribe();
     }
   }, [user]);
+
+  // Load history from Firestore
+  useEffect(() => {
+    if (user) {
+      const fetchHistory = async () => {
+        try {
+          const researchesRef = collection(db, "users", user.uid, "researches");
+          const q = query(
+            researchesRef,
+            orderBy("timestamp", "desc"),
+            limit(10)
+          );
+          const querySnapshot = await getDocs(q);
+          const history = querySnapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+            timestamp:
+              doc.data().timestamp?.toDate() || doc.data().lastSaved?.toDate(),
+          }));
+          setResearches(history);
+        } catch (error) {
+          console.error("Error fetching research history:", error);
+        }
+      };
+      fetchHistory();
+    }
+  }, [user]);
+
+  // Save current research to Firestore
+  const saveResearchToFirestore = async (isAuto = false) => {
+    if (!user || !researchTopic.trim()) return;
+
+    setIsSaving(true);
+    try {
+      const researchesRef = collection(db, "users", user.uid, "researches");
+      const stateToSave = {
+        topic: researchTopic,
+        researcherName,
+        supervisorName,
+        content: researchContent,
+        chatHistory,
+        selectedSections,
+        customSections,
+        selectedCustomSections,
+        unifiedSectionOrder,
+        titleFontSize,
+        contentFontSize,
+        titleFontWeight,
+        contentFontWeight,
+        titleColor,
+        contentColor,
+        fontFamily,
+        references,
+        pageCount,
+        timestamp: serverTimestamp(),
+        lastSaved: serverTimestamp(),
+        isAutoSave: isAuto,
+      };
+
+      await addDoc(researchesRef, stateToSave);
+      console.log("✅ Research saved to Firestore");
+
+      // Refresh history state
+      const q = query(researchesRef, orderBy("timestamp", "desc"), limit(10));
+      const querySnapshot = await getDocs(q);
+      setResearches(
+        querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+          timestamp:
+            doc.data().timestamp?.toDate() || doc.data().lastSaved?.toDate(),
+        }))
+      );
+    } catch (error) {
+      console.error("Error saving to Firestore:", error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Load research from history
+  const handleLoadResearch = (res) => {
+    if (researchContent.trim()) {
+      const confirmLoad = window.confirm(
+        "هل تريد الانتقال لبحث آخر؟ سيتم فقدان أي تغييرات غير محفوظة في البحث الحالي."
+      );
+      if (!confirmLoad) return;
+    }
+
+    console.log("📂 Loading research:", res.topic);
+    setResearchTopic(res.topic || "");
+    setResearcherName(res.researcherName || "");
+    setSupervisorName(res.supervisorName || "");
+    setResearchContent(res.content || "");
+    setChatHistory(res.chatHistory || []);
+    setSelectedSections(res.selectedSections || {});
+    setCustomSections(res.customSections || []);
+    setSelectedCustomSections(res.selectedCustomSections || {});
+    setUnifiedSectionOrder(res.unifiedSectionOrder || []);
+    setTitleFontSize(res.titleFontSize || 24);
+    setContentFontSize(res.contentFontSize || 16);
+    setTitleFontWeight(res.titleFontWeight || "bold");
+    setContentFontWeight(res.contentFontWeight || "normal");
+    setTitleColor(res.titleColor || "#000000");
+    setContentColor(res.contentColor || "#333333");
+    setFontFamily(res.fontFamily || "Cairo");
+    setReferences(res.references || []);
+    setPageCount(res.pageCount || 10);
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    setMobileMenuOpen(false);
+  };
 
   const handleSectionToggle = (section) => {
     setSelectedSections((prev) => ({ ...prev, [section]: !prev[section] }));
@@ -658,6 +877,39 @@ export default function ResearchNew() {
       }
     } catch (error) {
       console.error("Error removing custom section:", error);
+    }
+  };
+
+  const handleClearAllCustomSections = async () => {
+    if (
+      !window.confirm(
+        "هل أنت متأكد من حذف جميع الأقسام المخصصة؟ لا يمكن التراجع عن هذا الإجراء."
+      )
+    ) {
+      return;
+    }
+
+    setCustomSections([]);
+    setSelectedCustomSections({});
+    setInitialSections([]);
+
+    // Remove all custom sections from unified order
+    setUnifiedSectionOrder((prev) =>
+      prev.filter((key) => !key.startsWith("custom:"))
+    );
+
+    // Clear localStorage to prevent restoration of ghost sections
+    localStorage.removeItem("last_research_autosave");
+    console.log("🧹 Local storage cleared");
+
+    if (user) {
+      try {
+        const userDocRef = doc(db, "users", user.uid);
+        await setDoc(userDocRef, { customSections: [] }, { merge: true });
+        console.log("🧹 All custom sections cleared from Firestore");
+      } catch (err) {
+        console.error("Error clearing sections:", err);
+      }
     }
   };
 
@@ -1205,6 +1457,10 @@ ${newSections.map((s, i) => `${i + 1}. ${s}`).join("\n")}
 
       setGenerationStep("idle");
       console.log("✅ Research content set successfully");
+
+      // Auto-save to Firestore after successful generation
+      // Using a slight delay to ensure all state updates are processed
+      setTimeout(() => saveResearchToFirestore(true), 2000);
 
       // 🎨 OPTIONAL: IMAGE GENERATION (Still uses local AI code)
       // This is the ONLY place where local AI code is still used
@@ -1765,6 +2021,15 @@ ${
             onContentColorChange={setContentColor}
             selectedDecoration={selectedDecoration}
             onDecorationChange={setSelectedDecoration}
+            // Typography
+            titleFontSize={titleFontSize}
+            onTitleFontSizeChange={setTitleFontSize}
+            contentFontSize={contentFontSize}
+            onContentFontSizeChange={setContentFontSize}
+            titleFontWeight={titleFontWeight}
+            onTitleFontWeightChange={setTitleFontWeight}
+            contentFontWeight={contentFontWeight}
+            onContentFontWeightChange={setContentFontWeight}
             // Export
             exportFormat={exportFormat}
             onExportFormatChange={setExportFormat}
@@ -1787,6 +2052,11 @@ ${
             // Mobile
             mobileMenuOpen={mobileMenuOpen}
             onCloseMobile={() => setMobileMenuOpen(false)}
+            // History
+            researches={researches}
+            onLoadResearch={handleLoadResearch}
+            // Custom sections
+            onClearAllCustomSections={handleClearAllCustomSections}
           />
 
           {/* Main Content */}
@@ -1848,6 +2118,22 @@ ${
                   </div>
                 </div>
 
+                {/* Update Names Button - Appears only when names change */}
+                {(researcherName !== initialNames.researcher ||
+                  supervisorName !== initialNames.supervisor) &&
+                  researchContent && (
+                    <div className="mt-3 px-1">
+                      <button
+                        onClick={handleUpdateNames}
+                        className="w-full py-2.5 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 font-bold text-sm transition-all flex items-center justify-center gap-2 border border-blue-200 cursor-pointer"
+                        dir="rtl"
+                      >
+                        <User className="w-4 h-4" />
+                        تحديث الأسماء في البحث
+                      </button>
+                    </div>
+                  )}
+
                 {/* Generate Research Button - Moved here for better visibility */}
                 <div className="mt-4">
                   <button
@@ -1875,60 +2161,36 @@ ${
                       </>
                     )}
                   </button>
+
+                  {/* Relocated Action Notice */}
+                  {researchContent.trim() &&
+                    !actionNoticeDismissed &&
+                    (() => {
+                      const changes = detectChanges();
+                      // Only show if there are actual changes
+                      if (!changes.hasNewSections && !changes.hasNameChanges)
+                        return null;
+
+                      return (
+                        <div className="mt-4">
+                          <ResearchActionNotice
+                            hasNewSections={changes.hasNewSections}
+                            newSectionsList={changes.newSections}
+                            hasNameChanges={changes.hasNameChanges}
+                            researcherName={researcherName}
+                            supervisorName={supervisorName}
+                            onAddSectionsToResearch={
+                              handleAddSectionsToResearch
+                            }
+                            onUpdateNames={handleUpdateNamesOnly}
+                            onDismiss={() => setActionNoticeDismissed(true)}
+                          />
+                        </div>
+                      );
+                    })()}
                 </div>
               </div>
             </div>
-
-            {/* Token Usage Display */}
-            {tokenUsage && (
-              <div className="fade-on-scroll mt-4 bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-6 shadow-md border border-green-200">
-                <h3
-                  className="text-lg font-bold text-green-800 mb-4 flex items-center gap-2"
-                  dir="rtl"
-                >
-                  <Sparkles size={20} className="text-green-600" />
-                  إحصائيات الاستخدام
-                </h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="bg-white rounded-xl p-4 shadow-sm">
-                    <p className="text-sm text-gray-600 mb-1" dir="rtl">
-                      الإدخال
-                    </p>
-                    <p className="text-2xl font-bold text-green-700">
-                      {tokenUsage.prompt_tokens}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">رمز</p>
-                  </div>
-                  <div className="bg-white rounded-xl p-4 shadow-sm">
-                    <p className="text-sm text-gray-600 mb-1" dir="rtl">
-                      المخرجات
-                    </p>
-                    <p className="text-2xl font-bold text-blue-700">
-                      {tokenUsage.completion_tokens}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">رمز</p>
-                  </div>
-                  <div className="bg-white rounded-xl p-4 shadow-sm">
-                    <p className="text-sm text-gray-600 mb-1" dir="rtl">
-                      الإجمالي
-                    </p>
-                    <p className="text-2xl font-bold text-purple-700">
-                      {tokenUsage.total_tokens}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">رمز</p>
-                  </div>
-                  <div className="bg-white rounded-xl p-4 shadow-sm">
-                    <p className="text-sm text-gray-600 mb-1" dir="rtl">
-                      التكلفة التقريبية
-                    </p>
-                    <p className="text-xl font-bold text-amber-700">
-                      ${(tokenUsage.total_tokens * 0.000001).toFixed(6)}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">رصيد</p>
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* Chat Interface */}
             <div className="fade-on-scroll bg-white rounded-2xl sm:rounded-3xl shadow-md border border-gray-100 overflow-hidden">
@@ -2201,24 +2463,6 @@ ${
             {/* Research Output */}
             {researchContent && (
               <>
-                {/* Action Notice for Changes */}
-                {!actionNoticeDismissed &&
-                  (() => {
-                    const changes = detectChanges();
-                    return (
-                      <ResearchActionNotice
-                        hasNewSections={changes.hasNewSections}
-                        newSectionsList={changes.newSections}
-                        hasNameChanges={changes.hasNameChanges}
-                        researcherName={researcherName}
-                        supervisorName={supervisorName}
-                        onAddSectionsToResearch={handleAddSectionsToResearch}
-                        onUpdateNames={handleUpdateNamesOnly}
-                        onDismiss={() => setActionNoticeDismissed(true)}
-                      />
-                    );
-                  })()}
-
                 <div className="fade-on-scroll bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 shadow-md border border-gray-100">
                   <div className="flex items-center gap-4 mb-6 pb-4 border-b border-gray-200">
                     <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-600 to-teal-600 flex items-center justify-center shadow-lg">
@@ -2831,6 +3075,12 @@ ${
 
                         return researchContent
                           .split("\n")
+                          .filter(
+                            (line) =>
+                              line &&
+                              line.toLowerCase() !== "undefined" &&
+                              line.trim() !== ""
+                          )
                           .map((line, index) => {
                             const trimmed = line.trim();
                             if (!trimmed) return <br key={index} />;
@@ -2890,8 +3140,13 @@ ${
                                   id={sectionId}
                                   style={{
                                     color: titleColor,
-                                    fontWeight: 700,
-                                    fontSize: currentTemplateStyle.titleSize,
+                                    fontWeight:
+                                      titleFontWeight === "bold"
+                                        ? 700
+                                        : titleFontWeight === "black"
+                                        ? 900
+                                        : 400,
+                                    fontSize: `${titleFontSize}px`,
                                     marginTop:
                                       currentTemplateStyle.titleSpacing,
                                     marginBottom: "12px",
@@ -2910,11 +3165,12 @@ ${
                                 key={index}
                                 style={{
                                   color: contentColor,
-                                  fontSize: currentTemplateStyle.contentSize,
+                                  fontSize: `${contentFontSize}px`,
                                   lineHeight: currentTemplateStyle.lineHeight,
                                   marginBottom: currentTemplateStyle.spacing,
                                   paddingRight: "8px",
-                                  fontWeight: 400,
+                                  fontWeight:
+                                    contentFontWeight === "bold" ? 700 : 400,
                                 }}
                               >
                                 {trimmed}

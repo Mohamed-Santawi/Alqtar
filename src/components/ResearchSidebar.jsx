@@ -12,6 +12,8 @@ import {
   FileDown,
   Upload,
   LinkIcon,
+  Search,
+  History,
 } from "lucide-react";
 
 // Accordion Section Component (moved outside to prevent re-renders)
@@ -140,13 +142,31 @@ export default function ResearchSidebar({
   // Styles and config
   decorationStyles = {},
 
+  // Typography
+  titleFontSize = 24,
+  onTitleFontSizeChange,
+  contentFontSize = 16,
+  onContentFontSizeChange,
+  titleFontWeight = "bold",
+  onTitleFontWeightChange,
+  contentFontWeight = "normal",
+  onContentFontWeightChange,
+
+  // Custom Sections
+  onClearAllCustomSections,
+
   // Mobile
   mobileMenuOpen = false,
   onCloseMobile,
+
+  // History
+  researches = [],
+  onLoadResearch,
 }) {
   // Internal state for collapsible sections
   const [expandedSections, setExpandedSections] = useState({
     structure: true,
+    history: true, // Show history by default if available
     customization: false,
     references: false,
     export: false,
@@ -233,17 +253,6 @@ export default function ResearchSidebar({
     }
   };
 
-  // Debug logging
-  console.log("📊 ResearchSidebar render - customSections:", customSections);
-  console.log(
-    "📊 ResearchSidebar render - unifiedSectionOrder:",
-    unifiedSectionOrder
-  );
-  console.log(
-    "📊 ResearchSidebar render - sections in order with custom prefix:",
-    unifiedSectionOrder.filter((key) => key.startsWith("custom:"))
-  );
-
   return (
     <div
       className={`lg:col-span-1 fixed lg:relative inset-y-0 right-0 z-50 lg:z-auto transform transition-transform duration-300 ${
@@ -273,6 +282,40 @@ export default function ResearchSidebar({
 
         {/* Collapsible Sections */}
         <div className="divide-y divide-gray-200">
+          {/* Recent Researches Section */}
+          {researches.length > 0 && (
+            <AccordionSection
+              title="أبحاثك السابقة"
+              icon={History}
+              expanded={expandedSections.history}
+              onToggle={() => toggleSection("history")}
+            >
+              <div className="space-y-2 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
+                {researches.map((res) => (
+                  <button
+                    key={res.id}
+                    onClick={() => onLoadResearch?.(res)}
+                    className="w-full text-right p-3 rounded-xl border border-gray-100 bg-gray-50 hover:bg-blue-50 hover:border-blue-200 transition-all group flex items-start gap-3"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center shrink-0 group-hover:border-blue-300">
+                      <FileText size={16} className="text-blue-600" />
+                    </div>
+                    <div className="flex-1 overflow-hidden">
+                      <p className="text-sm font-bold text-gray-800 truncate group-hover:text-blue-600">
+                        {res.topic || "بدون عنوان"}
+                      </p>
+                      <p className="text-[10px] text-gray-400 mt-0.5">
+                        {res.timestamp
+                          ? new Date(res.timestamp).toLocaleDateString("ar-SA")
+                          : "تاريخ غير معروف"}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </AccordionSection>
+          )}
+
           {/* Research Structure Section */}
           <AccordionSection
             title="هيكل البحث"
@@ -439,12 +482,24 @@ export default function ResearchSidebar({
 
             {/* Add Custom Section */}
             <div className="mt-4 pt-4 border-t border-gray-200">
-              <label
-                className="block text-sm font-semibold text-gray-700 mb-2"
-                dir="rtl"
-              >
-                إضافة قسم مخصص
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label
+                  className="block text-sm font-semibold text-gray-700"
+                  dir="rtl"
+                >
+                  إضافة قسم مخصص
+                </label>
+                {unifiedSectionOrder.some((key) =>
+                  key.startsWith("custom:")
+                ) && (
+                  <button
+                    onClick={onClearAllCustomSections}
+                    className="text-[10px] text-red-500 hover:text-red-700 font-bold border border-red-100 bg-red-50 px-2 py-0.5 rounded-md transition-colors"
+                  >
+                    مسح جميع المخصص
+                  </button>
+                )}
+              </div>
               <div className="flex gap-2">
                 <input
                   type="text"
@@ -607,6 +662,126 @@ export default function ResearchSidebar({
                     title={color}
                   />
                 ))}
+              </div>
+            </div>
+
+            {/* Typography Controls */}
+            <div className="pt-4 border-t border-gray-100 space-y-4">
+              <h4
+                className="text-xs font-bold text-gray-400 uppercase tracking-wider"
+                dir="rtl"
+              >
+                إعدادات الخط
+              </h4>
+
+              {/* Title Typography */}
+              <div className="space-y-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                <label
+                  className="block text-sm font-semibold text-gray-700"
+                  dir="rtl"
+                >
+                  العناوين
+                </label>
+
+                <div className="flex items-center gap-4">
+                  <span className="text-xs text-gray-500 w-8 text-center">
+                    {titleFontSize}px
+                  </span>
+                  <input
+                    type="range"
+                    min="18"
+                    max="48"
+                    step="1"
+                    value={titleFontSize}
+                    onChange={(e) =>
+                      onTitleFontSizeChange?.(parseInt(e.target.value))
+                    }
+                    className="flex-1 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                  />
+                </div>
+
+                <div className="flex bg-white p-1 rounded-lg border border-gray-200">
+                  <button
+                    onClick={() => onTitleFontWeightChange?.("normal")}
+                    className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${
+                      titleFontWeight === "normal"
+                        ? "bg-blue-600 text-white shadow-sm"
+                        : "text-gray-500 hover:bg-gray-50"
+                    }`}
+                  >
+                    عادي
+                  </button>
+                  <button
+                    onClick={() => onTitleFontWeightChange?.("bold")}
+                    className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${
+                      titleFontWeight === "bold"
+                        ? "bg-blue-600 text-white shadow-sm"
+                        : "text-gray-500 hover:bg-gray-50"
+                    }`}
+                  >
+                    عريض
+                  </button>
+                  <button
+                    onClick={() => onTitleFontWeightChange?.("black")}
+                    className={`flex-1 py-1.5 text-xs font-black rounded-md transition-all ${
+                      titleFontWeight === "black"
+                        ? "bg-blue-600 text-white shadow-sm"
+                        : "text-gray-500 hover:bg-gray-50"
+                    }`}
+                  >
+                    أسود
+                  </button>
+                </div>
+              </div>
+
+              {/* Content Typography */}
+              <div className="space-y-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                <label
+                  className="block text-sm font-semibold text-gray-700"
+                  dir="rtl"
+                >
+                  المحتوى
+                </label>
+
+                <div className="flex items-center gap-4">
+                  <span className="text-xs text-gray-500 w-8 text-center">
+                    {contentFontSize}px
+                  </span>
+                  <input
+                    type="range"
+                    min="12"
+                    max="24"
+                    step="1"
+                    value={contentFontSize}
+                    onChange={(e) =>
+                      onContentFontSizeChange?.(parseInt(e.target.value))
+                    }
+                    className="flex-1 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                  />
+                </div>
+
+                <div className="flex bg-white p-1 rounded-lg border border-gray-200">
+                  <button
+                    onClick={() => onContentFontWeightChange?.("normal")}
+                    className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${
+                      contentFontWeight === "normal"
+                        ? "bg-blue-600 text-white shadow-sm"
+                        : "text-gray-500 hover:bg-gray-50"
+                    }`}
+                  >
+                    عادي
+                  </button>
+                  <button
+                    onClick={() => onContentFontWeightChange?.("bold")}
+                    className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${
+                      contentFontWeight === "bold"
+                        ? "bg-blue-600 text-white shadow-sm"
+                        : "text-gray-500 hover:bg-gray-50"
+                    }`}
+                  >
+                    عريض
+                  </button>
+                </div>
               </div>
             </div>
 
