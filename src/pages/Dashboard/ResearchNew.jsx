@@ -24,6 +24,7 @@ import {
   ChevronDown,
   Menu,
 } from "lucide-react";
+import { motion } from "framer-motion";
 
 // ⚠️ OLD AI IMPORT - NOT USED ANYMORE
 // Research generation now goes through n8n webhook
