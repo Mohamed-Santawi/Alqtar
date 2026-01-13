@@ -46,6 +46,7 @@ import {
 } from "firebase/firestore";
 import ResearchSidebar from "../../components/ResearchSidebar";
 import ResearchActionNotice from "../../components/ResearchActionNotice";
+import { extractSections, scrollToSection } from "./ResearchNew/utils";
 
 export default function ResearchNew() {
   const navigate = useNavigate();
@@ -223,6 +224,11 @@ export default function ResearchNew() {
 
   // Auto-generate images for research
   const [autoGenerateImages, setAutoGenerateImages] = useState(false);
+
+  // Image analysis state
+  const [imageAnalysisResults, setImageAnalysisResults] = useState(null);
+  const [analyzingImages, setAnalyzingImages] = useState(false);
+  const [suggestedTopic, setSuggestedTopic] = useState("");
 
   // Collapsible sections state for sidebar accordion
   const [expandedSections, setExpandedSections] = useState({
@@ -1191,6 +1197,74 @@ ${newSections.map((s, i) => `${i + 1}. ${s}`).join("\n")}
     }
   };
 
+  // Handle image analysis using backend API
+  const [isAnalyzingImages, setIsAnalyzingImages] = useState(false);
+
+  const handleAnalyzeImages = async () => {
+    if (!uploadedImages || uploadedImages.length === 0) {
+      alert("يرجى رفع صورة واحدة على الأقل للتحليل");
+      return;
+    }
+
+    if (uploadedImages.length > 5) {
+      alert("الحد الأقصى هو 5 صور");
+      return;
+    }
+
+    setIsAnalyzingImages(true);
+
+    try {
+      console.log("🖼️ Starting image analysis...");
+
+      // Get auth token
+      const token = await user.getIdToken();
+
+      // Prepare images (base64)
+      const imageData = uploadedImages.map((img) => img.base64 || img.preview);
+
+      console.log(`📤 Sending ${imageData.length} images to backend API`);
+
+      // Call backend API
+      const response = await fetch("http://localhost:3001/api/analyze-images", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          images: imageData,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "فشل تحليل الصور");
+      }
+
+      const data = await response.json();
+      const { suggestedTopic, tokensUsed } = data;
+
+      console.log("🎯 Suggested topic:", suggestedTopic);
+      console.log("💰 Tokens used:", tokensUsed);
+
+      // Auto-fill research topic
+      setResearchTopic(suggestedTopic);
+
+      alert(
+        `✅ تم اقتراح الموضوع:\n\n"${suggestedTopic}"\n\nالاستخدام: ${tokensUsed} tokens`
+      );
+    } catch (error) {
+      console.error("❌ Error analyzing images:", error);
+      alert(`حدث خطأ: ${error.message}`);
+    } finally {
+      setIsAnalyzingImages(false);
+    }
+  };
+
+  const handleRemoveImage = (imageId) => {
+    setUploadedImages(uploadedImages.filter((img) => img.id !== imageId));
+  };
+
   // دالة لإضافة أسماء الطالب والمشرف في بداية البحث
   const addNamesToContent = (content) => {
     // التحقق من وجود الأسماء في بداية المحتوى بالفعل
@@ -1301,6 +1375,51 @@ ${newSections.map((s, i) => `${i + 1}. ${s}`).join("\n")}
       setLoading(false);
     }
   };
+
+  // Handle image analysis to extract topic
+  const handleAnalyzeImages = async () => {
+    if (!uploadedImages || uploadedImages.length === 0) {
+      alert("يرجى رفع صور للتحليل");
+      return;
+    }
+
+    setAnalyzingImages(true);
+    setImageAnalysisResults(null);
+
+    try {
+      console.log(`🔍 Analyzing ${uploadedImages.length} images...`);
+
+      const { extractTopicFromImages } = await import("../../services/ai");
+      const analysis = await extractTopicFromImages(uploadedImages);
+
+      console.log("✅ Image analysis complete:", analysis);
+
+      setImageAnalysisResults(analysis);
+      setSuggestedTopic(analysis.suggestedTopic || "");
+
+      // If no topic is set, use the suggested topic
+      if (!researchTopic.trim()) {
+        setResearchTopic(analysis.suggestedTopic || "");
+      }
+
+      alert(
+        `✅ تم تحليل الصور!\n\nالموضوع المقترح: ${analysis.suggestedTopic}`
+      );
+    } catch (error) {
+      console.error("❌ Error analyzing images:", error);
+      alert(`حدث خطأ أثناء تحليل الصور: ${error.message}`);
+    } finally {
+      setAnalyzingImages(false);
+    }
+  };
+
+  // Expose analyze function to window for sidebar button
+  React.useEffect(() => {
+    window.handleAnalyzeImagesFromSidebar = handleAnalyzeImages;
+    return () => {
+      delete window.handleAnalyzeImagesFromSidebar;
+    };
+  }, [uploadedImages, researchTopic]);
 
   const handleGenerateResearch = async () => {
     // Allow generation if either topic OR images are provided
@@ -1550,70 +1669,7 @@ ${newSections.map((s, i) => `${i + 1}. ${s}`).join("\n")}
     }
   };
 
-  // دالة لاستخراج جميع الأقسام من المحتوى (العناوين فقط)
-  const extractSections = (content) => {
-    const sections = [];
-    const seenSections = new Set(); // لمنع التكرار
-    const lines = content.split("\n");
-
-    lines.forEach((line, index) => {
-      const trimmed = line.trim();
-      if (!trimmed) return;
-
-      // ✅ CRITICAL: Only detect lines that start with ## as main sections
-      if (!trimmed.startsWith("##")) {
-        return;
-      }
-
-      // Remove ## prefix
-      const cleanedLine = trimmed.replace(/^##\s+/, "");
-
-      // استبعاد الفهرس نفسه من القائمة
-      if (cleanedLine.includes("فهرس المحتوى") || cleanedLine.match(/^فهرس/i)) {
-        return;
-      }
-
-      // استبعاد الأسماء (الطالب/المشرف)
-      if (
-        cleanedLine.startsWith("الطالب:") ||
-        cleanedLine.startsWith("المشرف:")
-      ) {
-        return;
-      }
-
-      // إنشاء معرف فريد للقسم
-      const sectionKey = cleanedLine
-        .replace(/[:\-–—]/g, "")
-        .trim()
-        .toLowerCase();
-
-      // منع التكرار - إذا كان القسم موجود بالفعل، لا نضيفه
-      if (!seenSections.has(sectionKey)) {
-        seenSections.add(sectionKey);
-        const sectionId = `section-${index}-${cleanedLine
-          .replace(/\s+/g, "-")
-          .replace(/[^\w-]/g, "")}`;
-        sections.push({
-          id: sectionId,
-          title: cleanedLine, // العنوان بدون ## prefix
-          index: index,
-        });
-      }
-    });
-
-    return sections;
-  };
-
-  // دالة للتمرير إلى قسم معين
-  const scrollToSection = (sectionId) => {
-    const element = document.getElementById(sectionId);
-    if (element) {
-      element.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    }
-  };
+  // ✅ extractSections and scrollToSection now imported from utils
 
   // إضافة/تحديث الأسماء فقط
   const handleAddNames = () => {
@@ -2040,18 +2096,33 @@ ${
                     className="block text-gray-800 font-bold mb-2 sm:mb-3 text-base sm:text-lg"
                     dir="rtl"
                   >
-                    موضوع البحث <span className="text-red-500">*</span>
+                    موضوع البحث{" "}
+                    {!uploadedImages || uploadedImages.length === 0 ? (
+                      <span className="text-red-500">*</span>
+                    ) : (
+                      <span className="text-gray-400 text-sm">(اختياري)</span>
+                    )}
                   </label>
                   <input
                     type="text"
                     value={researchTopic}
                     onChange={(e) => setResearchTopic(e.target.value)}
-                    placeholder="أدخل موضوع البحث..."
+                    placeholder={
+                      uploadedImages && uploadedImages.length > 0
+                        ? "أدخل موضوع البحث أو قم بتحليل الصور..."
+                        : "أدخل موضوع البحث..."
+                    }
                     className="w-full px-4 sm:px-6 py-3 sm:py-4 rounded-xl border border-gray-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none text-base sm:text-lg transition-all shadow-sm"
                     dir="rtl"
-                    required
+                    required={!uploadedImages || uploadedImages.length === 0}
                     minLength={3}
                   />
+                  {uploadedImages && uploadedImages.length > 0 && (
+                    <p className="mt-2 text-sm text-purple-600 flex items-center gap-1">
+                      <Sparkles size={14} />
+                      يمكنك رفع صور وتحليلها للحصول على موضوع مقترح تلقائياً
+                    </p>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
@@ -2975,31 +3046,64 @@ ${
                         return null;
                       })()}
 
-                      {/* Display Uploaded Images */}
-                      {uploadedImages.length > 0 && (
-                        <div className="mb-6 space-y-4">
-                          <h3
-                            className="text-lg font-bold mb-3"
-                            style={{ color: titleColor }}
-                          >
-                            الصور المرفوعة
+                      {/* Image Analysis Results - Keep this in main content for visibility */}
+                      {imageAnalysisResults && (
+                        <div className="mb-6 p-4 bg-gradient-to-r from-purple-50 to-indigo-50 border-2 border-purple-200 rounded-lg">
+                          <h3 className="text-lg font-bold mb-3 text-purple-700 flex items-center gap-2">
+                            <Bot size={20} />
+                            نتائج تحليل الصور
                           </h3>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {uploadedImages.map((img) => (
-                              <div
-                                key={img.id}
-                                className="relative group rounded-lg overflow-hidden border-2 border-gray-200"
-                              >
-                                <img
-                                  src={img.url}
-                                  alt={img.name}
-                                  className="w-full h-auto object-cover"
-                                />
-                                <div className="absolute top-2 left-2 bg-black/50 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                                  {img.name}
+
+                          <div className="space-y-3">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                الموضوع المقترح
+                              </label>
+                              <p className="text-base font-semibold text-purple-900 bg-white p-3 rounded border border-purple-200">
+                                {imageAnalysisResults.suggestedTopic}
+                              </p>
+                            </div>
+
+                            {imageAnalysisResults.keyThemes &&
+                              imageAnalysisResults.keyThemes.length > 0 && (
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    المواضيع الرئيسية
+                                  </label>
+                                  <div className="flex flex-wrap gap-2">
+                                    {imageAnalysisResults.keyThemes.map(
+                                      (theme, idx) => (
+                                        <span
+                                          key={idx}
+                                          className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm"
+                                        >
+                                          {theme}
+                                        </span>
+                                      )
+                                    )}
+                                  </div>
                                 </div>
+                              )}
+
+                            {imageAnalysisResults.description && (
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  وصف المحتوى
+                                </label>
+                                <p className="text-sm text-gray-700 bg-white p-3 rounded border border-purple-200">
+                                  {imageAnalysisResults.description}
+                                </p>
                               </div>
-                            ))}
+                            )}
+
+                            {imageAnalysisResults.confidence && (
+                              <div className="text-xs text-gray-600 flex items-center gap-2">
+                                <span>مستوى الثقة:</span>
+                                <span className="font-semibold text-purple-700">
+                                  {imageAnalysisResults.confidence}
+                                </span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       )}

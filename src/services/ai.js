@@ -142,9 +142,9 @@ export async function generateImage(prompt, options = {}) {
  */
 export async function analyzeImagesForResearch(
   images,
-  topic,
-  sections,
-  instructions
+  topic = null,
+  sections = [],
+  instructions = ""
 ) {
   try {
     // Build content with images
@@ -163,7 +163,6 @@ export async function analyzeImagesForResearch(
         type: "image_url",
         image_url: {
           url: img.base64 || img.preview,
-          detail: "high", // Request detailed analysis
         },
       });
     });
@@ -184,12 +183,158 @@ export async function analyzeImagesForResearch(
     ];
 
     return chatCompletion(messages, {
-      model: "gpt-4-vision-preview", // Use vision-capable model
+      model: "meta-llama/Llama-3.2-11B-Vision-Instruct", // ✅ Cheapest vision model
       max_tokens: 8000,
       temperature: 0.7,
     });
   } catch (error) {
     console.error("Error analyzing images:", error);
+    throw error;
+  }
+}
+
+/**
+ * Extract research topic from uploaded images
+ * @param {Array} images - Array of image objects with base64 data
+ * @returns {Object} - { suggestedTopic, keyThemes, confidence, description }
+ */
+export async function extractTopicFromImages(images) {
+  try {
+    const content = [
+      {
+        type: "text",
+        text: `قم بتحليل الصور التالية واقترح موضوع بحث علمي مناسب.
+
+قدم:
+1. موضوع بحث واضح ومحدد (جملة واحدة)
+2. الموضوعات الرئيسية (3-5 نقاط)
+3. وصف موجز لمحتوى الصور
+4. مستوى الثقة في التحليل (عالي/متوسط/منخفض)
+
+اكتب إجابتك بتنسيق JSON كالتالي:
+{
+  "suggestedTopic": "موضوع البحث المقترح",
+  "keyThemes": ["موضوع 1", "موضوع 2", "موضوع 3"],
+  "description": "وصف مختصر لمحتوى الصور",
+  "confidence": "عالي"
+}`,
+      },
+    ];
+
+    // Add all images
+    images.forEach((img) => {
+      content.push({
+        type: "image_url",
+        image_url: {
+          url: img.base64 || img.preview,
+        },
+      });
+    });
+
+    const messages = [
+      {
+        role: "system",
+        content: `أنت خبير في تحليل الصور الأكاديمية وتحديد موضوعات البحث.
+قم بتحليل الصور بعناية وتحديد الموضوع الأكثر ملاءمة للبحث العلمي.
+كن دقيقاً ومحدداً في اقتراحاتك.`,
+      },
+      {
+        role: "user",
+        content: content,
+      },
+    ];
+
+    const response = await chatCompletion(messages, {
+      model: "meta-llama/Llama-3.2-11B-Vision-Instruct", // ✅ Cheapest vision model
+      max_tokens: 1000,
+      temperature: 0.7,
+    });
+
+    const result = response.choices?.[0]?.message?.content || "{}";
+
+    try {
+      // Try to parse JSON response
+      return JSON.parse(result);
+    } catch (parseError) {
+      // If JSON parsing fails, extract topic from text
+      console.warn("Failed to parse JSON, extracting topic from text");
+      return {
+        suggestedTopic: result.split("\n")[0].trim(),
+        keyThemes: [],
+        description: result,
+        confidence: "متوسط",
+      };
+    }
+  } catch (error) {
+    console.error("Error extracting topic from images:", error);
+    throw error;
+  }
+}
+
+/**
+ * Analyze images and suggest research topic (simplified, faster version)
+ * Uses Llama 3.2 11B Vision Turbo for quick topic generation
+ * @param {Array<File>} images - Array of image File objects
+ * @returns {Promise<string>} - Suggested research topic in Arabic
+ */
+export async function analyzeImagesForTopic(images) {
+  try {
+    // Convert images to base64
+    const imageBase64Array = await Promise.all(
+      images.map(async (img) => {
+        const file = img.file || img;
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const base64 = reader.result;
+            resolve(base64);
+          };
+          reader.readAsDataURL(file);
+        });
+      })
+    );
+
+    // Build content with images
+    const content = [
+      {
+        type: "text",
+        text: "بناءً على هذه الصور، اقترح عنوان بحث أكاديمي مناسب باللغة العربية. أعطني العنوان فقط بدون أي نص إضافي.",
+      },
+      ...imageBase64Array.map((base64) => ({
+        type: "image_url",
+        image_url: {
+          url: base64,
+        },
+      })),
+    ];
+
+    const messages = [
+      {
+        role: "system",
+        content:
+          "أنت مساعد ذكي متخصص في تحليل الصور واقتراح موضوعات بحثية أكاديمية باللغة العربية. اقترح عنواناً واضحاً ومحدداً.",
+      },
+      {
+        role: "user",
+        content: content,
+      },
+    ];
+
+    // Call Llama 3.2 11B Vision Turbo
+    const response = await chatCompletion(messages, {
+      model: "meta-llama/Llama-3.2-11B-Vision-Instruct-Turbo",
+      max_tokens: 100,
+      temperature: 0.7,
+    });
+
+    const suggestedTopic =
+      response.choices?.[0]?.message?.content?.trim() || "";
+
+    console.log("🎯 AI suggested topic from images:", suggestedTopic);
+
+    return suggestedTopic;
+  } catch (error) {
+    console.error("Error analyzing images for topic:", error);
     throw error;
   }
 }
@@ -560,6 +705,8 @@ export default {
   generateImage,
   analyzeImage,
   analyzeImagesForResearch,
+  extractTopicFromImages,
+  analyzeImagesForTopic, // NEW
   generateIllustrativeImages,
   generateResearchPaper,
   generateQuestions,

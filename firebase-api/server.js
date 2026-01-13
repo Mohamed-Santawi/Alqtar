@@ -391,6 +391,147 @@ app.post("/api/user/:userId/add-balance", async (req, res) => {
   }
 });
 
+// ==========================================
+// Image Analysis Endpoint
+// ==========================================
+app.post("/api/analyze-images", async (req, res) => {
+  try {
+    console.log("🖼️ Image analysis request received");
+
+    // 1. Verify Firebase Auth Token
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "Unauthorized - Missing token" });
+    }
+
+    const token = authHeader.split("Bearer ")[1];
+    let decodedToken;
+
+    try {
+      decodedToken = await admin.auth().verifyIdToken(token);
+    } catch (error) {
+      console.error("❌ Token verification failed:", error);
+      return res.status(401).json({ error: "Unauthorized - Invalid token" });
+    }
+
+    const userId = decodedToken.uid;
+    console.log(`✅ Authenticated user: ${userId}`);
+
+    // 2. Validate request body
+    const { images } = req.body;
+
+    if (!images || !Array.isArray(images) || images.length === 0) {
+      return res.status(400).json({ error: "No images provided" });
+    }
+
+    if (images.length > 5) {
+      return res.status(400).json({ error: "Maximum 5 images allowed" });
+    }
+
+    console.log(`📸 Analyzing ${images.length} images`);
+
+    // 3. Call AIML API
+    const aimlApiKey =
+      process.env.AIML_API_KEY || "24846e8f3bce499aaf46ae76bb75f388";
+
+    const response = await fetch(
+      "https://api.aimlapi.com/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${aimlApiKey}`,
+        },
+        body: JSON.stringify({
+          model: "meta-llama/Llama-3.2-11B-Vision-Instruct-Turbo",
+          messages: [
+            {
+              role: "system",
+              content:
+                "أنت مساعد ذكي متخصص في تحليل الصور واقتراح موضوعات بحثية أكاديمية باللغة العربية.",
+            },
+            {
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: "بناءً على هذه الصور، اقترح عنوان بحث أكاديمي مناسب باللغة العربية. أعطني العنوان فقط بدون أي نص إضافي.",
+                },
+                ...images.map((base64) => ({
+                  type: "image_url",
+                  image_url: { url: base64 },
+                })),
+              ],
+            },
+          ],
+          max_tokens: 100,
+          temperature: 0.7,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("❌ AIML API error:", errorData);
+      return res.status(500).json({
+        error: "AI analysis failed",
+        details: errorData.error?.message,
+      });
+    }
+
+    const aiResponse = await response.json();
+    const suggestedTopic = aiResponse.choices?.[0]?.message?.content?.trim();
+    const tokensUsed = aiResponse.usage?.total_tokens || 0;
+
+    console.log(`✅ Topic suggested: "${suggestedTopic}"`);
+    console.log(`💰 Tokens used: ${tokensUsed}`);
+
+    // 4. Log to Firebase
+    const firebaseDb = await initializeFirebase();
+    const logEntry = {
+      userId,
+      action: "image_analysis",
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      imagesCount: images.length,
+      suggestedTopic,
+      tokensUsed,
+      model: "meta-llama/Llama-3.2-11B-Vision-Instruct-Turbo",
+      status: "success",
+    };
+
+    await firebaseDb.collection("usage_logs").add(logEntry);
+    console.log("📝 Usage logged to Firebase");
+
+    // 5. Return response
+    return res.json({
+      success: true,
+      suggestedTopic,
+      tokensUsed,
+    });
+  } catch (error) {
+    console.error("❌ Error in image analysis:", error);
+
+    // Log error to Firebase
+    try {
+      const firebaseDb = await initializeFirebase();
+      await firebaseDb.collection("usage_logs").add({
+        userId: req.body?.userId || "unknown",
+        action: "image_analysis",
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        status: "error",
+        error: error.message,
+      });
+    } catch (logError) {
+      console.error("Failed to log error:", logError);
+    }
+
+    return res.status(500).json({
+      error: "Internal server error",
+      message: error.message,
+    });
+  }
+});
+
 // For Vercel, we export the app
 // For local dev, we run app.listen if NOT in a Vercel environment
 if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
@@ -405,6 +546,7 @@ if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
     console.log(`  GET  /api/user/:userId/balance`);
     console.log(`  POST /api/user/:userId/deduct-balance`);
     console.log(`  POST /api/user/:userId/add-balance`);
+    console.log(`  POST /api/analyze-images`);
     console.log("");
     // Firebase initialization will happen on the first request via middleware
   });

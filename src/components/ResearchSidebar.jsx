@@ -977,7 +977,7 @@ export default function ResearchSidebar({
                         className="w-full h-24 object-cover"
                       />
                       <button
-                        onClick={() => onRemoveImage?.(index)}
+                        onClick={() => onRemoveImage?.(img.id)}
                         className="absolute top-1 right-1 p-1 bg-red-500 hover:bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                         title="حذف الصورة"
                       >
@@ -995,6 +995,38 @@ export default function ResearchSidebar({
                 <p className="mt-2 text-xs text-green-600" dir="rtl">
                   ✓ تم رفع {uploadedImages.length} صورة
                 </p>
+              )}
+
+              {/* Analyze Images Button */}
+              {uploadedImages && uploadedImages.length > 0 && (
+                <button
+                  onClick={() => {
+                    // Call the analyze function passed from parent
+                    if (
+                      typeof window !== "undefined" &&
+                      window.handleAnalyzeImagesFromSidebar
+                    ) {
+                      window.handleAnalyzeImagesFromSidebar();
+                    }
+                  }}
+                  className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-lg hover:from-purple-600 hover:to-indigo-700 transition-all"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M12 3v18m-9-9h18" />
+                    <path d="M12 3L8.5 6.5M12 3l3.5 3.5M12 21l-3.5-3.5M12 21l3.5-3.5" />
+                  </svg>
+                  تحليل الصور واقتراح موضوع
+                </button>
               )}
             </div>
           </AccordionSection>
