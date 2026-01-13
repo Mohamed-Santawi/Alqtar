@@ -1261,10 +1261,6 @@ ${newSections.map((s, i) => `${i + 1}. ${s}`).join("\n")}
     }
   };
 
-  const handleRemoveImage = (imageId) => {
-    setUploadedImages(uploadedImages.filter((img) => img.id !== imageId));
-  };
-
   // دالة لإضافة أسماء الطالب والمشرف في بداية البحث
   const addNamesToContent = (content) => {
     // التحقق من وجود الأسماء في بداية المحتوى بالفعل
@@ -1375,51 +1371,6 @@ ${newSections.map((s, i) => `${i + 1}. ${s}`).join("\n")}
       setLoading(false);
     }
   };
-
-  // Handle image analysis to extract topic
-  const handleAnalyzeImages = async () => {
-    if (!uploadedImages || uploadedImages.length === 0) {
-      alert("يرجى رفع صور للتحليل");
-      return;
-    }
-
-    setAnalyzingImages(true);
-    setImageAnalysisResults(null);
-
-    try {
-      console.log(`🔍 Analyzing ${uploadedImages.length} images...`);
-
-      const { extractTopicFromImages } = await import("../../services/ai");
-      const analysis = await extractTopicFromImages(uploadedImages);
-
-      console.log("✅ Image analysis complete:", analysis);
-
-      setImageAnalysisResults(analysis);
-      setSuggestedTopic(analysis.suggestedTopic || "");
-
-      // If no topic is set, use the suggested topic
-      if (!researchTopic.trim()) {
-        setResearchTopic(analysis.suggestedTopic || "");
-      }
-
-      alert(
-        `✅ تم تحليل الصور!\n\nالموضوع المقترح: ${analysis.suggestedTopic}`
-      );
-    } catch (error) {
-      console.error("❌ Error analyzing images:", error);
-      alert(`حدث خطأ أثناء تحليل الصور: ${error.message}`);
-    } finally {
-      setAnalyzingImages(false);
-    }
-  };
-
-  // Expose analyze function to window for sidebar button
-  React.useEffect(() => {
-    window.handleAnalyzeImagesFromSidebar = handleAnalyzeImages;
-    return () => {
-      delete window.handleAnalyzeImagesFromSidebar;
-    };
-  }, [uploadedImages, researchTopic]);
 
   const handleGenerateResearch = async () => {
     // Allow generation if either topic OR images are provided
