@@ -2074,6 +2074,8 @@ ${
             uploadedImages={uploadedImages}
             onAddImages={handleAddImages}
             onRemoveImage={handleRemoveImage}
+            isAnalyzingImages={isAnalyzingImages}
+            onAnalyzeImages={handleAnalyzeImages}
             // Styles and config
             decorationStyles={decorationStyles}
             // Mobile
