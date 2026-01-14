@@ -1224,8 +1224,11 @@ ${newSections.map((s, i) => `${i + 1}. ${s}`).join("\n")}
 
       console.log(`📤 Sending ${imageData.length} images to backend API`);
 
-      // Call backend API
-      const response = await fetch("http://localhost:3001/api/analyze-images", {
+      // Call backend API (Vercel production - has Firebase credentials)
+      const apiUrl =
+        import.meta.env.VITE_BACKEND_API_URL ||
+        "https://firebase-api-flame.vercel.app";
+      const response = await fetch(`${apiUrl}/api/analyze-images`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
