@@ -1219,8 +1219,61 @@ ${newSections.map((s, i) => `${i + 1}. ${s}`).join("\n")}
       // Get auth token
       const token = await user.getIdToken();
 
-      // Prepare images (base64)
-      const imageData = uploadedImages.map((img) => img.base64 || img.preview);
+      // Compress images to reduce payload size (Vercel has 4.5MB limit)
+      const compressImage = (base64Image, maxWidth = 800, quality = 0.7) => {
+        return new Promise((resolve) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement("canvas");
+            let width = img.width;
+            let height = img.height;
+
+            // Resize if too large
+            if (width > maxWidth) {
+              height = (height * maxWidth) / width;
+              width = maxWidth;
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0, width, height);
+
+            // Convert to compressed base64
+            const compressed = canvas.toDataURL("image/jpeg", quality);
+            resolve(compressed);
+          };
+          img.src = base64Image;
+        });
+      };
+
+      console.log("🔄 Compressing images...");
+      const imageData = await Promise.all(
+        uploadedImages.map(async (img) => {
+          const original = img.base64 || img.preview;
+          const compressed = await compressImage(original, 800, 0.6);
+          const originalSize = (original.length / 1024).toFixed(0);
+          const compressedSize = (compressed.length / 1024).toFixed(0);
+          console.log(
+            `   📸 Compressed: ${originalSize}KB → ${compressedSize}KB`
+          );
+          return compressed;
+        })
+      );
+
+      // Debug: Log payload size
+      const payload = JSON.stringify({ images: imageData });
+      const payloadSizeKB = (payload.length / 1024).toFixed(2);
+      const payloadSizeMB = (payload.length / 1024 / 1024).toFixed(2);
+
+      console.log(`📦 Payload details:`);
+      console.log(`   - Images: ${imageData.length}`);
+      console.log(
+        `   - Payload size: ${payloadSizeKB} KB (${payloadSizeMB} MB)`
+      );
+      console.log(
+        `   - First image size: ${(imageData[0]?.length / 1024).toFixed(2)} KB`
+      );
 
       console.log(`📤 Sending ${imageData.length} images to backend API`);
 
@@ -1228,6 +1281,9 @@ ${newSections.map((s, i) => `${i + 1}. ${s}`).join("\n")}
       const apiUrl =
         import.meta.env.VITE_BACKEND_API_URL ||
         "https://firebase-api-alpha.vercel.app";
+
+      console.log(`🌐 API URL: ${apiUrl}/api/analyze-images`);
+
       const response = await fetch(`${apiUrl}/api/analyze-images`, {
         method: "POST",
         headers: {
