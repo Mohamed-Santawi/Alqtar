@@ -540,13 +540,16 @@ app.post("/api/analyze-images", async (req, res) => {
     return res.status(500).json({
       error: "Internal server error",
       message: error.message,
+      error: "Image analysis failed",
+      details: error.message,
     });
   }
 });
 
-// For Vercel, we export the app
-// For local dev, we run app.listen if NOT in a Vercel environment
-if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
+// ==========================================
+// Server Start
+// ==========================================
+if (process.env.NODE_ENV !== "production") {
   app.listen(PORT, () => {
     console.log("");
     console.log("🚀 Firebase Balance API Server");
